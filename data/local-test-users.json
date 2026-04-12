@@ -1,0 +1,27 @@
+{
+  "admin": {
+    "email": "lokal-admin@indoor.test",
+    "password": "IndoorTest123!",
+    "name": "Lokal Admin"
+  },
+  "participants": [
+    {
+      "name": "Anna Andersen",
+      "email": "anna.andersen@indoor.test",
+      "phone": "+4520112233",
+      "channel": "EMAIL"
+    },
+    {
+      "name": "Bo Berg",
+      "email": "bo.berg@indoor.test",
+      "phone": "+4520445566",
+      "channel": "SMS"
+    },
+    {
+      "name": "Clara Clausen",
+      "email": "clara.clausen@indoor.test",
+      "phone": "+4520778899",
+      "channel": "EMAIL"
+    }
+  ]
+}

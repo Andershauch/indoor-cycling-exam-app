@@ -1,0 +1,1012 @@
+{
+  "examSet": {
+    "slug": "indoor-cycling-proeve-opdateret",
+    "title": "Indoor Cycling Prøve",
+    "description": "Opdateret prøve importeret fra indoor_cycling_proeve_opdateret.xlsx",
+    "version": 2,
+    "timeLimitMinutes": 30,
+    "passPercentage": 75
+  },
+  "questions": [
+    {
+      "externalKey": "indoor-cycling-opdateret-001",
+      "questionNumber": 1,
+      "category": null,
+      "questionText": "Hvis du har smerter i knæet foran, er det typisk fordi?",
+      "explanation": "Forreste knæsmerter kan skyldes for høj kadence; blandt valgene passer C bedst.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Styret er for lavt",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Sadlen er for langt tilbage",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Kørsel med for højt RPM/tempo uden belastning",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-002",
+      "questionNumber": 2,
+      "category": null,
+      "questionText": "Hvis du har ømhed i bagdelen, skal du?",
+      "explanation": "Ømhed bagtil: brug cykelshorts.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Hæve sadlen",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Køre uden cykelshorts",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Køre med cykelshorts",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-003",
+      "questionNumber": 3,
+      "category": null,
+      "questionText": "Hvis foden sover, kan du?",
+      "explanation": "Foden sover: løsn skoene.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Stramme skoen hårdere",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Pege fødderne ned ad når du kører",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Løsne skoene",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-004",
+      "questionNumber": 4,
+      "category": null,
+      "questionText": "Hvad kan årsagen være, hvis du har ondt i hænder og håndled?",
+      "explanation": "Hænder/håndled: kan skyldes at man hænger i styret.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "At du kører med neutralt håndled",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "At du hænger i styret",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "At styret er for højt",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-005",
+      "questionNumber": 5,
+      "category": null,
+      "questionText": "Hvad kan årsagen være til ømhed i lænden?",
+      "explanation": "Lænd/nakke: for lavt styr nævnes som mulig årsag.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Styret er for lavt",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "Sadlen er for lav",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "For tung kørsel",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-006",
+      "questionNumber": 6,
+      "category": null,
+      "questionText": "Hvad er slagvolumen?",
+      "explanation": "Slagvolumen er den mængde blod hjertet pumper ud per slag.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Den mængde blod hjertet pumper ud per minut",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Den mængde blod hjertet pumper ud per slag",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Den mængde blod kroppen indeholder",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-007",
+      "questionNumber": 7,
+      "category": null,
+      "questionText": "Stiger slagvolumen ved konditionstræning?",
+      "explanation": "Slagvolumen øges ved regelmæssig konditionstræning.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Nej",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ja",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Kun hos ældre",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-008",
+      "questionNumber": 8,
+      "category": null,
+      "questionText": "Hvornår indtræder mælkesyren?",
+      "explanation": "Mælkesyre dannes ved anaerobt arbejde.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Ved aerob træning",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ved anaerob træning",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Ved kørsel i meget højt tempo",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-009",
+      "questionNumber": 9,
+      "category": null,
+      "questionText": "Hvad er iltgæld?",
+      "explanation": "Iltgæld er resultatet af arbejde med iltunderskud.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Kørsel med maxpuls",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Resultatet af kørsel med iltunderskud",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Kørsel med samme intensitet i lang tid",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-010",
+      "questionNumber": 10,
+      "category": null,
+      "questionText": "Hvad er superkompensation?",
+      "explanation": "Superkompensation beskriver at kroppen bliver stærkere/mere udholdende efter korrekt træning og restitution.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Kroppens evne til at blive stærkere eller mere udholdende",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "Kroppens evne til at forbrænde fedt",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Kroppens evne til at transportere ilt",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-011",
+      "questionNumber": 11,
+      "category": null,
+      "questionText": "Hvilke 3 overordnede elementer kan motivere deltagerne?",
+      "explanation": "De tre elementer er autonomi, mestring og formål.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Autonomi, mestring og formål",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "Autonomi, selvtillid og skæld ud",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Autonomi, arrogance og stolthed",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-012",
+      "questionNumber": 12,
+      "category": null,
+      "questionText": "Hvad er flow?",
+      "explanation": "Flow opstår når udfordringer og færdigheder stemmer overens.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Når færdigheder er større end udfordringer",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Når du er usikker på, hvad der skal ske",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Når udfordringer og færdigheder stemmer overens",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-013",
+      "questionNumber": 13,
+      "category": null,
+      "questionText": "Hvad er dårlig kommunikation",
+      "explanation": "For avanceret sprog nævnes som dårlig kommunikation/støj.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Klar og tydelig tale",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "For avanceret sprog",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Når man har kontakt med sine medlemmer",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-014",
+      "questionNumber": 14,
+      "category": null,
+      "questionText": "Hvordan kan du blive bedre til at kommunikere?",
+      "explanation": "Kropssprog er en vigtig del af kommunikationen.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Ved at gøre som du plejer",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ved at bruge dit kropssprog",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Ved at kigge væk imens, at du taler",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-015",
+      "questionNumber": 15,
+      "category": null,
+      "questionText": "Hvordan kommunikerer du bedst med dine deltagere?",
+      "explanation": "God kommunikation tager højde for, hvad der motiverer deltageren.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Ved altid at målrette til dem du bedst kan lide",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ved at forsøge at sætte dig ind i, hvad der motiverer den enkelte deltager",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Ved kun at holde fokus på dit program og din tid",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-016",
+      "questionNumber": 16,
+      "category": null,
+      "questionText": "Hvad er vigtigt inden timen går i gang?",
+      "explanation": "Inden timen: afprøv anlæg, mikrofon, indstil cykel, noter og ur.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Det vigtige er bare, at du møder op",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Kontrol af anlæg, program, mikrofon og egne cykelindstillinger",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "At man selv er varmet 100% op",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-017",
+      "questionNumber": 17,
+      "category": null,
+      "questionText": "Hvad skal deltagerne vide i præsentation af din blok?",
+      "explanation": "Blokke præsenteres med længde, indhold og slutmål.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Længde, indhold og slutmål",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "Hvem der har lavet musikken",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Startmål, længde og indhold",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-018",
+      "questionNumber": 18,
+      "category": null,
+      "questionText": "Hvordan bruger du volumen optimalt?",
+      "explanation": "Volumen tilpasses blok og intensitet.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Det skal være så højt, at deltagerne ikke kan snakke sammen",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Holder den på samme konstante niveau",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Ved at tilpasse den i forhold til din blok og intensiteten",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-019",
+      "questionNumber": 19,
+      "category": null,
+      "questionText": "Hvordan bruger du bedst din stemme i løbet af timen?",
+      "explanation": "Stemmen tilpasses blokken og intensiteten.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Ved at tale i samme toneleje",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ved at råbe så højt du kan",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Ved at tilpasse stemmen i forhold til blokken og intensiteten",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-020",
+      "questionNumber": 20,
+      "category": null,
+      "questionText": "Hvad bidrager ikke til et godt overblik under timen?",
+      "explanation": "Fuld fokus på papir/program bidrager ikke til godt overblik.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Øjenkontakt",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "At kigge rundt i salen",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Fuld fokus på dit papir/program",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-021",
+      "questionNumber": 21,
+      "category": null,
+      "questionText": "Hvad er RPM?",
+      "explanation": "RPM er antal runder/tråd per minut.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Antal runder du træder per minut",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "Antal beats i musikken per minut",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Antal slag hjertet slår per minut",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-022",
+      "questionNumber": 22,
+      "category": null,
+      "questionText": "Hvis BPM er 140, hvilken RPM er enkeltakten så?",
+      "explanation": "Enkelttakt ved 140 BPM svarer til 70 RPM.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "60 RPM",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "65 RPM",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "70 RPM",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-023",
+      "questionNumber": 23,
+      "category": null,
+      "questionText": "Hvad er enkeltakt?",
+      "explanation": "Enkelttakt: højre og venstre ben i bund ved hvert taktslag.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Dobbelt tempo af musikken",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Skiftevis højre og venstre ben i bund ved hvert taktslag",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Når der køres væk fra beatet",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-024",
+      "questionNumber": 24,
+      "category": null,
+      "questionText": "Hvilket tempo anbefaler vi som minimumsgrænse på Indoor Cycling?",
+      "explanation": "Minimumsgrænsen anbefales til 60 RPM.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "40 RPM",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "60 RPM",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "80 RPM",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-025",
+      "questionNumber": 25,
+      "category": null,
+      "questionText": "Hvorfor kan det være en god ide at bruge musikkens 'tydelig 1'er' til skift i blokken (f.eks. skift fra siddende til stående arbejde)?",
+      "explanation": "Den tydelige '1'er gør skift lette at høre og mærke; blandt valgene passer A bedst.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Fordi der her er mest energi",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "For at opnå bedst iltoptagelse",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "For at stresse deltagerne",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-026",
+      "questionNumber": 26,
+      "category": null,
+      "questionText": "Hvordan kan du subjektivt beskrive intensitetsskala 7?",
+      "explanation": "Skala 7 = anstrengende arbejde; korte sætninger.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Moderat arbejde med let øget vejrtrækning",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Anstrengende arbejde – du kan formulere dig i korte sætninger",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Maksimalt arbejde/du giver alt hvad du har",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-027",
+      "questionNumber": 27,
+      "category": null,
+      "questionText": "Hvor længe bør en begyndertime maksimalt være?",
+      "explanation": "Begyndertime eksemplificeres som 45 minutter i alt.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "30 minutter",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "45 minutter",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "55 minutter",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-028",
+      "questionNumber": 28,
+      "category": null,
+      "questionText": "Hvad er effekten af et godt program?",
+      "explanation": "Effektiv konditionstræning øger iltoptagelsen.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Du har lavt forbrug af energi",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Du belaster hjertet minimalt",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Din iltoptagelse stiger",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-029",
+      "questionNumber": 29,
+      "category": null,
+      "questionText": "Hvor lang tid kan du maksimalt arbejde i intensitetsskala 8?",
+      "explanation": "Intensitet 8 kan holdes 15-35 minutter til udmattelse.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "1–9 minutter",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "15–35 minutter",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "35–60 minutter",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-030",
+      "questionNumber": 30,
+      "category": null,
+      "questionText": "Hvad er fordelen ved opvarmning?",
+      "explanation": "Opvarmning mindsker skadesrisiko.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Du kommer op på maxpuls med det samme",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Du minimerer risikoen for skader",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Nervesignaler sendes langsommere",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-031",
+      "questionNumber": 31,
+      "category": null,
+      "questionText": "Hvordan kan du sikre korrekt basisindstilling af saddelhøjde?",
+      "explanation": "Basis-saddelhøjde: det øverste af sadlen flugter med overkanten på låret ved 90° bøjning.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Sadlen skal være ved underkanten af låret ved 90 graders flex. af hoften",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Sadlen skal være ud fra navlen, når du står med strakte ben",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Sadlen skal være ved overkanten af låret ved 90 graders flex. af hoften",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-032",
+      "questionNumber": 32,
+      "category": null,
+      "questionText": "Hvordan kan du sikre korrekt basisindstilling af styrhøjde?",
+      "explanation": "Styret sættes som udgangspunkt i samme højde som sadlen.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Styret skal være i samme højde som albuer, hvis du står ved siden af cyklen",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Styret skal være i samme højde som sadelspids",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Styret skal være 2-3 cm lavere end sadelspids",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-033",
+      "questionNumber": 33,
+      "category": null,
+      "questionText": "Hvordan kan du sikre korrekt basisindstilling af styret?",
+      "explanation": "Afstanden fra sadelspids til styr = underarmslængde + 2-3 cm.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Styret skal være en underarmslængde + 2-3 cm fra sadelspids",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "Styret skal helt tilbage",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Styret skal stå i midten",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-034",
+      "questionNumber": 34,
+      "category": null,
+      "questionText": "Hvordan kan du sikre korrekt finjustering af sadel?",
+      "explanation": "Kontrol af sadel: lodlinje fra forkant af knæ ved kl. 3 gennem pedalakslen.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Sadlen skubbes helt frem",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Sadlen skubbes helt tilbage",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Når pedalarmen står kl. 3 skal lodlinjen falde fra forkanten af knæet og ned i pedalen",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-035",
+      "questionNumber": 35,
+      "category": null,
+      "questionText": "Hvordan kan du sikre korrekt finjustering af styr?",
+      "explanation": "Skuldre og albuer skal være afslappede; let bøjede albuer passer bedst.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Albuerne skal være strakte",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Du skal have let bøjede og afslappede albuer",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Du skal have 90 graders flex. i albuen",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-036",
+      "questionNumber": 36,
+      "category": null,
+      "questionText": "Hvor meget væske kan kroppen ca. optage per time?",
+      "explanation": "Manualen angiver ca. 1000-1200 ml/time som maks. optag; B er nærmeste svarmulighed.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "600–800 ml",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "900–1000 ml",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "1200–1400 ml",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-037",
+      "questionNumber": 37,
+      "category": null,
+      "questionText": "Hvor meget væske anbefaler man at drikke på en Indoor Cycling time?",
+      "explanation": "Drik efter behov/svedtab; for 0-60 min må behov vurderes ud fra arbejdet.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "1500 ml",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ved varighed mellem 0-60 minutter må man vurdere ud fra typen af arbejde om det er nødvendigt at drikke",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "2000 ml",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-038",
+      "questionNumber": 38,
+      "category": null,
+      "questionText": "Hvor meget kan et væsketab på bare 2% kropsvægt nedsætte din præstation?",
+      "explanation": "2 % væsketab nedsætter præstationsevnen med hele 20 %.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Hele 40%",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Hele 30%",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Hele 20%",
+          "isCorrect": true
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-039",
+      "questionNumber": 39,
+      "category": null,
+      "questionText": "Hvordan kan du estimere dit væsketab?",
+      "explanation": "Væsketest: vej dig uden tøj før og efter træning.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Ved at drikke 1/3 af din kropsvægt i deciliter inden træning",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Ved at veje dig selv uden tøj før og efter et træning",
+          "isCorrect": true
+        },
+        {
+          "label": "C",
+          "text": "Ved at kigge på din urin før træning",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "externalKey": "indoor-cycling-opdateret-040",
+      "questionNumber": 40,
+      "category": null,
+      "questionText": "Hvordan kan man se om man er i væskebalance?",
+      "explanation": "Væskebalance vurderes via klar/lysegul urin; A passer bedst.",
+      "sourceReference": "indoor_cycling_proeve_opdateret.xlsx",
+      "options": [
+        {
+          "label": "A",
+          "text": "Når din urin er lysegul",
+          "isCorrect": true
+        },
+        {
+          "label": "B",
+          "text": "Når din urin er mørkegul",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Når din urin er helt hvid",
+          "isCorrect": false
+        }
+      ]
+    }
+  ]
+}

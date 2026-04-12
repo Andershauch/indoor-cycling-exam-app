@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  EDITOR
+}
+
+enum InvitationChannel {
+  EMAIL
+  SMS
+}
+
+enum InvitationStatus {
+  CREATED
+  SENT
+  OPENED
+  COMPLETED
+  EXPIRED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+  EXPIRED
+}
+
+model AdminUser {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  name           String
+  role           AdminRole    @default(EDITOR)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdExams   ExamSet[]
+  createdInvites Invitation[]
+}
+
+model ExamSet {
+  id               String              @id @default(cuid())
+  slug             String              @unique
+  title            String
+  description      String?
+  version          Int                 @default(1)
+  timeLimitMinutes Int
+  passPercentage   Int
+  isActive         Boolean             @default(false)
+  publishedAt      DateTime?
+  importedAt       DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  createdByAdminId String?
+  createdByAdmin   AdminUser?          @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  examQuestions    ExamQuestion[]
+  invitations      Invitation[]
+  attempts         ParticipantAttempt[]
+
+  @@index([isActive])
+}
+
+model Question {
+  id              String         @id @default(cuid())
+  externalKey     String         @unique
+  category        String?
+  questionText    String
+  explanation     String?
+  sourceReference String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  options         AnswerOption[]
+  examEntries     ExamQuestion[]
+}
+
+model ExamQuestion {
+  id         String          @id @default(cuid())
+  examSetId  String
+  questionId String
+  /// Fast rækkefølge for hele prøven.
+  position   Int
+  createdAt  DateTime        @default(now())
+  examSet    ExamSet         @relation(fields: [examSetId], references: [id], onDelete: Cascade)
+  question   Question        @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  answers    AttemptAnswer[]
+
+  @@unique([examSetId, position])
+  @@unique([examSetId, questionId])
+  @@index([questionId])
+}
+
+model AnswerOption {
+  id         String          @id @default(cuid())
+  questionId String
+  label      String
+  optionText String
+  isCorrect  Boolean         @default(false)
+  sortOrder  Int
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  question   Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedIn AttemptAnswer[]
+
+  @@unique([questionId, label])
+  @@unique([questionId, sortOrder])
+  @@index([questionId, isCorrect])
+}
+
+model Invitation {
+  id                String             @id @default(cuid())
+  examSetId         String
+  createdByAdminId  String?
+  channel           InvitationChannel
+  status            InvitationStatus   @default(CREATED)
+  token             String             @unique
+  recipientName     String?
+  recipientEmail    String?
+  recipientPhone    String?
+  deliveryReference String?
+  lastDeliveryError String?
+  sentAt            DateTime?
+  openedAt          DateTime?
+  completedAt       DateTime?
+  expiresAt         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  examSet           ExamSet            @relation(fields: [examSetId], references: [id], onDelete: Cascade)
+  createdByAdmin    AdminUser?         @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  attempts          ParticipantAttempt[]
+
+  @@index([examSetId, status])
+  @@index([channel, status])
+}
+
+model ParticipantAttempt {
+  id                   String             @id @default(cuid())
+  examSetId            String
+  invitationId         String?
+  status               AttemptStatus      @default(IN_PROGRESS)
+  participantName      String?
+  participantEmail     String?
+  participantPhone     String?
+  startedAt            DateTime           @default(now())
+  lastSavedAt          DateTime?
+  submittedAt          DateTime?
+  expiresAt            DateTime?
+  currentQuestionIndex Int?
+  correctAnswerCount   Int?
+  totalQuestionCount   Int?
+  scorePercentage      Decimal?           @db.Decimal(5, 2)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  examSet              ExamSet            @relation(fields: [examSetId], references: [id], onDelete: Restrict)
+  invitation           Invitation?        @relation(fields: [invitationId], references: [id], onDelete: SetNull)
+  answers              AttemptAnswer[]
+
+  @@index([examSetId, status])
+  @@index([submittedAt])
+}
+
+model AttemptAnswer {
+  id               String             @id @default(cuid())
+  attemptId        String
+  examQuestionId   String
+  selectedOptionId String?
+  /// Snapshot gør rapportering stabil ved aflevering.
+  isCorrect        Boolean?
+  answeredAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  attempt          ParticipantAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  examQuestion     ExamQuestion       @relation(fields: [examQuestionId], references: [id], onDelete: Restrict)
+  selectedOption   AnswerOption?      @relation(fields: [selectedOptionId], references: [id], onDelete: SetNull)
+
+  @@unique([attemptId, examQuestionId])
+  @@index([selectedOptionId])
+  @@index([examQuestionId])
+}

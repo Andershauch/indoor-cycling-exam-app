@@ -1,0 +1,42 @@
+{
+  "examSet": {
+    "slug": "indoor-cycling-proeve",
+    "title": "Indoor Cycling Prøve",
+    "description": "Fast teoriprøve i indoor cycling",
+    "version": 1,
+    "timeLimitMinutes": 30,
+    "passPercentage": 75
+  },
+  "questions": [
+    {
+      "externalKey": "indoor-cycling-001",
+      "questionNumber": 1,
+      "category": "Skader og indstillinger",
+      "questionText": "Hvis du har smerter i knæet foran, er det typisk fordi?",
+      "options": [
+        {
+          "label": "A",
+          "text": "Styret er for lavt",
+          "isCorrect": false
+        },
+        {
+          "label": "B",
+          "text": "Sadlen er for langt tilbage",
+          "isCorrect": false
+        },
+        {
+          "label": "C",
+          "text": "Kørsel med for højt RPM eller tempo uden belastning",
+          "isCorrect": true
+        },
+        {
+          "label": "D",
+          "text": "Sadlen står for højt",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "Forklar kort hvorfor dette svar er korrekt.",
+      "sourceReference": "DGI manual side X"
+    }
+  ]
+}
