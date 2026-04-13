@@ -342,14 +342,14 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
 
   return (
     <>
-      <div className="participant-exam-shell pt-2">
-        <section className="participant-sticky-bar grid gap-3 px-3 py-3">
+      <div className="participant-exam-shell pt-1">
+        <section className="participant-sticky-bar grid gap-2 px-3 py-2">
           <div className="flex items-center justify-between gap-3">
             <p className="kicker">Aktiv prøve</p>
             <TimerBadge
               value={formatTimeLeft(timeLeft)}
               tone={timeLeft <= 60_000 ? "danger" : timeLeft <= 5 * 60_000 ? "warning" : "default"}
-              className="shrink-0"
+              className="shrink-0 [&_span:first-child]:text-[0.65rem] [&_span:last-child]:text-lg"
             />
           </div>
           <ProgressBar
@@ -359,14 +359,14 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           />
         </section>
 
-        <div className="participant-exam-content px-1 pb-3 pt-4">
+        <div className="participant-exam-content px-1 pb-3 pt-3">
           <section
-            className="participant-question-card participant-surface grid h-full min-h-0 grid-rows-[auto_1fr_auto] gap-5 p-5 sm:gap-6 sm:p-6"
+            className="participant-question-card participant-surface grid h-full min-h-0 grid-rows-[auto_1fr_auto] gap-4 p-4 sm:gap-5 sm:p-5"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="space-y-3">
+            <div className="space-y-2">
               <p className="kicker">{currentQuestion.category ?? "Fast prøve"}</p>
               <h1 className="section-title">
                 Spørgsmål {String(activeIndex + 1).padStart(2, "0")}
@@ -374,8 +374,8 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
             </div>
 
             <div className="min-h-0 overflow-y-auto pr-1">
-              <div className="space-y-5">
-                <p className="text-xl font-bold leading-snug text-balance sm:text-2xl">
+              <div className="space-y-4">
+                <p className="text-lg font-bold leading-snug text-balance sm:text-xl">
                   {currentQuestion.questionText}
                 </p>
                 <fieldset className="grid gap-3">
@@ -396,19 +396,19 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
               </div>
             </div>
 
-            <div className="rounded-[1.25rem] border border-border-soft bg-white/55 p-4">
-              <p aria-live="polite" className="text-sm leading-6 text-muted-foreground">
+            <div className="rounded-[1rem] border border-border-soft bg-white/55 p-3">
+              <p aria-live="polite" className="text-xs leading-5 text-muted-foreground">
                 {saveMessage}
               </p>
             </div>
           </section>
         </div>
 
-        <section className="participant-surface mt-3 grid grid-cols-4 gap-2 border-border/10 px-3 py-3 shadow-[0_-10px_26px_rgba(17,17,17,0.12)]">
+        <section className="participant-footer-nav grid grid-cols-[3rem_1fr_1fr_3rem] gap-2 px-2.5 pt-2.5">
           <Button
             variant="secondary"
-            size="md"
-            className="w-full px-0"
+            size="sm"
+            className="w-full px-0 text-base"
             onClick={goToPreviousQuestion}
             disabled={activeIndex === 0}
             aria-label="Forrige spørgsmål"
@@ -417,15 +417,15 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           </Button>
           <Button
             variant="ghost"
-            size="md"
-            className="w-full px-2"
+            size="sm"
+            className="w-full px-2 text-[0.7rem] tracking-[0.04em]"
             onClick={() => setIsOverviewOpen(true)}
           >
             Oversigt
           </Button>
           <Button
-            size="md"
-            className="w-full px-2"
+            size="sm"
+            className="w-full px-2 text-[0.7rem] tracking-[0.04em]"
             onClick={() => void submitAttempt(false)}
             disabled={isPending || saveState === "saving"}
           >
@@ -433,8 +433,8 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           </Button>
           <Button
             variant="secondary"
-            size="md"
-            className="w-full px-0"
+            size="sm"
+            className="w-full px-0 text-base"
             onClick={goToNextQuestion}
             disabled={isLastQuestion}
             aria-label="Næste spørgsmål"

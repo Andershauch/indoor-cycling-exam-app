@@ -214,29 +214,27 @@ svg {
 
 .participant-sticky-bar {
   position: sticky;
-  top: var(--space-2);
+  top: 0.35rem;
   z-index: 20;
   backdrop-filter: blur(10px);
   background: rgba(255, 247, 190, 0.92);
   border: 1.5px solid rgba(17, 17, 17, 0.08);
-  border-radius: 1.35rem;
-  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.08);
+  border-radius: 1.05rem;
+  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.08);
 }
 
 .participant-footer-nav {
   position: fixed;
-  bottom: 0;
+  bottom: 0.35rem;
   left: 50%;
   transform: translateX(-50%);
-  width: min(calc(100vw - 1.5rem), 34rem);
-  z-index: 20;
+  width: min(calc(100vw - 1rem), 34rem);
+  z-index: 30;
   margin-inline: 0;
-  border-top: 1.5px solid rgba(17, 17, 17, 0.1);
-  border-right: 1.5px solid rgba(17, 17, 17, 0.06);
-  border-left: 1.5px solid rgba(17, 17, 17, 0.06);
-  border-radius: 1.4rem 1.4rem 0 0;
+  border: 1.5px solid rgba(17, 17, 17, 0.08);
+  border-radius: 1.2rem;
   background: rgba(255, 253, 244, 0.985);
-  box-shadow: 0 -10px 26px rgba(17, 17, 17, 0.12);
+  box-shadow: 0 10px 30px rgba(17, 17, 17, 0.16);
   padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
 }
 
