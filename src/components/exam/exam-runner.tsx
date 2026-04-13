@@ -355,11 +355,11 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
         </div>
       </section>
 
-      <section className="participant-footer-nav grid gap-4 p-4">
-        <div className="grid grid-cols-2 gap-3">
+      <section className="participant-footer-nav grid gap-3 px-3 pb-3 pt-3">
+        <div className="grid grid-cols-2 gap-2">
           <Button
             variant="secondary"
-            size="lg"
+            size="md"
             onClick={goToPreviousQuestion}
             disabled={activeIndex === 0}
           >
@@ -367,7 +367,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           </Button>
           {isLastQuestion ? (
             <Button
-              size="lg"
+              size="md"
               onClick={() => void submitAttempt(false)}
               disabled={isPending || saveState === "saving"}
             >
@@ -375,7 +375,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
             </Button>
           ) : (
             <Button
-              size="lg"
+              size="md"
               onClick={goToNextQuestion}
             >
               Næste

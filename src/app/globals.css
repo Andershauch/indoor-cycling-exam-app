@@ -225,12 +225,16 @@ svg {
 
 .participant-footer-nav {
   position: sticky;
-  bottom: var(--space-2);
+  bottom: 0;
   z-index: 20;
-  border: 1.5px solid rgba(17, 17, 17, 0.08);
-  border-radius: 1.5rem;
-  background: rgba(255, 253, 244, 0.98);
-  box-shadow: 0 18px 40px rgba(17, 17, 17, 0.16);
+  margin-inline: -0.1rem;
+  border-top: 1.5px solid rgba(17, 17, 17, 0.1);
+  border-right: 1.5px solid rgba(17, 17, 17, 0.06);
+  border-left: 1.5px solid rgba(17, 17, 17, 0.06);
+  border-radius: 1.4rem 1.4rem 0 0;
+  background: rgba(255, 253, 244, 0.985);
+  box-shadow: 0 -10px 26px rgba(17, 17, 17, 0.12);
+  padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
 }
 
 .participant-status-chip {
