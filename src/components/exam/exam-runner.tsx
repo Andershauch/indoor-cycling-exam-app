@@ -286,22 +286,9 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
 
   return (
     <div className="space-y-4 pb-28 pt-2">
-      <section className="participant-sticky-bar grid gap-4 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-2">
-            <p className="kicker">Aktiv prøve</p>
-            <div className="flex flex-wrap gap-2">
-              <span className="participant-status-chip">
-                Spørgsmål {activeIndex + 1} af {attempt.questions.length}
-              </span>
-              {currentAnswer ? (
-                <span className="participant-status-chip">Svar valgt</span>
-              ) : (
-                <span className="participant-status-chip">Afventer svar</span>
-              )}
-              <span className="participant-status-chip">Swipe for næste</span>
-            </div>
-          </div>
+      <section className="participant-sticky-bar grid gap-3 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="kicker">Aktiv prøve</p>
           <TimerBadge
             value={formatTimeLeft(timeLeft)}
             tone={timeLeft <= 60_000 ? "danger" : timeLeft <= 5 * 60_000 ? "warning" : "default"}
@@ -311,7 +298,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
         <ProgressBar
           value={answeredIndexes.length}
           max={attempt.questions.length}
-          label="Besvaret"
+          label={`Spørgsmål ${activeIndex + 1} af ${attempt.questions.length}`}
         />
       </section>
 
