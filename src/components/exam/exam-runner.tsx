@@ -413,7 +413,18 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
             disabled={activeIndex === 0}
             aria-label="Forrige spørgsmål"
           >
-            <span aria-hidden="true">←</span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12.5 4.5L7 10l5.5 5.5" />
+            </svg>
           </Button>
           <Button
             variant="ghost"
@@ -439,7 +450,18 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
             disabled={isLastQuestion}
             aria-label="Næste spørgsmål"
           >
-            <span aria-hidden="true">→</span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 20 20"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M7.5 4.5L13 10l-5.5 5.5" />
+            </svg>
           </Button>
         </section>
       </div>
