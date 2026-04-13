@@ -365,13 +365,11 @@ svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 3rem;
-  padding-inline: var(--space-4);
   border: 2px solid var(--color-text);
-  background: var(--color-surface);
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  text-transform: uppercase;
+  border-radius: 0.85rem;
+  overflow: hidden;
+  background: #000000;
+  box-shadow: var(--shadow-flat);
 }
 
 .content-copy {
