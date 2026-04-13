@@ -27,6 +27,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeIndex, setActiveIndex] = useState(attempt.currentQuestionIndex);
+  const [isOverviewOpen, setIsOverviewOpen] = useState(false);
   const [answers, setAnswers] = useState(() => {
     const initial = new Map<string, string | null>();
 
@@ -47,6 +48,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   const pendingSaveCountRef = useRef(0);
   const pendingAnswerSaveRef = useRef<Promise<void> | null>(null);
   const pendingProgressRef = useRef<Promise<void> | null>(null);
+  const autoAdvanceTimeoutRef = useRef<number | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const touchEndRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -100,6 +102,31 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
     await request;
   }
 
+  function scheduleAutoAdvance(expectedIndex: number) {
+    if (expectedIndex >= attempt.questions.length - 1) {
+      return;
+    }
+
+    if (autoAdvanceTimeoutRef.current) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current);
+    }
+
+    autoAdvanceTimeoutRef.current = window.setTimeout(() => {
+      setActiveIndex((currentIndex) => {
+        if (currentIndex !== expectedIndex) {
+          return currentIndex;
+        }
+
+        const nextIndex = Math.min(attempt.questions.length - 1, currentIndex + 1);
+        startTransition(() => {
+          void persistProgress(nextIndex);
+        });
+        return nextIndex;
+      });
+      autoAdvanceTimeoutRef.current = null;
+    }, 220);
+  }
+
   async function handleSelectAnswer(
     examQuestionId: string,
     selectedOptionId: string,
@@ -136,6 +163,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
 
         setSaveState("idle");
         setSaveMessage("Svar gemt.");
+        scheduleAutoAdvance(activeIndex);
       })
       .catch((error) => {
         setAnswers((current) => {
@@ -158,6 +186,11 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   }
 
   function goToQuestion(nextIndex: number) {
+    if (autoAdvanceTimeoutRef.current) {
+      window.clearTimeout(autoAdvanceTimeoutRef.current);
+      autoAdvanceTimeoutRef.current = null;
+    }
+
     setActiveIndex(nextIndex);
     startTransition(() => {
       void persistProgress(nextIndex);
@@ -284,119 +317,175 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
+  useEffect(() => {
+    if (!isOverviewOpen) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOverviewOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isOverviewOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimeoutRef.current) {
+        window.clearTimeout(autoAdvanceTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <div className="space-y-4 pb-40 pt-2 sm:pb-44">
-      <section className="participant-sticky-bar grid gap-3 p-3">
-        <div className="flex items-center justify-between gap-3">
-          <p className="kicker">Aktiv prøve</p>
-          <TimerBadge
-            value={formatTimeLeft(timeLeft)}
-            tone={timeLeft <= 60_000 ? "danger" : timeLeft <= 5 * 60_000 ? "warning" : "default"}
-            className="shrink-0"
-          />
-        </div>
-        <ProgressBar
-          value={answeredIndexes.length}
-          max={attempt.questions.length}
-          label={`Spørgsmål ${activeIndex + 1} af ${attempt.questions.length}`}
-        />
-      </section>
-
-      <details className="participant-surface p-5">
-        <summary className="cursor-pointer list-none text-sm font-bold uppercase tracking-[0.08em]">
-          Se spørgeoversigt
-        </summary>
-        <div className="mt-4">
-          <QuestionNavigation
-            total={attempt.questions.length}
-            currentIndex={activeIndex}
-            answeredIndexes={answeredIndexes}
-            onSelect={goToQuestion}
-          />
-        </div>
-      </details>
-
-      <section
-        className="participant-question-card participant-surface grid gap-5 p-5 sm:gap-6 sm:p-6"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div className="space-y-3">
-          <p className="kicker">{currentQuestion.category ?? "Fast prøve"}</p>
-          <h1 className="section-title">
-            Spørgsmål {String(activeIndex + 1).padStart(2, "0")}
-          </h1>
-          <p className="text-xl font-bold leading-snug text-balance sm:text-2xl">
-            {currentQuestion.questionText}
-          </p>
-        </div>
-
-        <fieldset className="grid gap-3">
-          <legend className="sr-only">Vælg det bedste svar</legend>
-          {currentQuestion.options.map((option) => (
-            <AnswerChoice
-              key={option.id}
-              id={option.id}
-              name={currentQuestion.examQuestionId}
-              label={option.label}
-              text={option.text}
-              checked={currentAnswer === option.id}
-              onChange={() => void handleSelectAnswer(currentQuestion.examQuestionId, option.id)}
-              state={currentAnswer === option.id ? "selected" : "default"}
+    <>
+      <div className="participant-exam-shell pt-2">
+        <section className="participant-sticky-bar grid gap-3 px-3 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="kicker">Aktiv prøve</p>
+            <TimerBadge
+              value={formatTimeLeft(timeLeft)}
+              tone={timeLeft <= 60_000 ? "danger" : timeLeft <= 5 * 60_000 ? "warning" : "default"}
+              className="shrink-0"
             />
-          ))}
-        </fieldset>
+          </div>
+          <ProgressBar
+            value={answeredIndexes.length}
+            max={attempt.questions.length}
+            label={`Spørgsmål ${activeIndex + 1} af ${attempt.questions.length}`}
+          />
+        </section>
 
-        <div className="rounded-[1.25rem] border border-border-soft bg-white/55 p-4">
-          <p aria-live="polite" className="text-sm leading-6 text-muted-foreground">
-            {saveMessage}
-          </p>
+        <div className="participant-exam-content px-1 pb-3 pt-4">
+          <section
+            className="participant-question-card participant-surface grid h-full min-h-0 grid-rows-[auto_1fr_auto] gap-5 p-5 sm:gap-6 sm:p-6"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="space-y-3">
+              <p className="kicker">{currentQuestion.category ?? "Fast prøve"}</p>
+              <h1 className="section-title">
+                Spørgsmål {String(activeIndex + 1).padStart(2, "0")}
+              </h1>
+            </div>
+
+            <div className="min-h-0 overflow-y-auto pr-1">
+              <div className="space-y-5">
+                <p className="text-xl font-bold leading-snug text-balance sm:text-2xl">
+                  {currentQuestion.questionText}
+                </p>
+                <fieldset className="grid gap-3">
+                  <legend className="sr-only">Vælg det bedste svar</legend>
+                  {currentQuestion.options.map((option) => (
+                    <AnswerChoice
+                      key={option.id}
+                      id={option.id}
+                      name={currentQuestion.examQuestionId}
+                      label={option.label}
+                      text={option.text}
+                      checked={currentAnswer === option.id}
+                      onChange={() => void handleSelectAnswer(currentQuestion.examQuestionId, option.id)}
+                      state={currentAnswer === option.id ? "selected" : "default"}
+                    />
+                  ))}
+                </fieldset>
+              </div>
+            </div>
+
+            <div className="rounded-[1.25rem] border border-border-soft bg-white/55 p-4">
+              <p aria-live="polite" className="text-sm leading-6 text-muted-foreground">
+                {saveMessage}
+              </p>
+            </div>
+          </section>
         </div>
-      </section>
 
-      <section className="participant-footer-nav grid gap-3 px-3 pb-3 pt-3">
-        <div className="grid grid-cols-2 gap-2">
+        <section className="participant-surface mt-3 grid grid-cols-4 gap-2 border-border/10 px-3 py-3 shadow-[0_-10px_26px_rgba(17,17,17,0.12)]">
           <Button
             variant="secondary"
             size="md"
-            className="w-full"
+            className="w-full px-0"
             onClick={goToPreviousQuestion}
             disabled={activeIndex === 0}
+            aria-label="Forrige spørgsmål"
           >
-            Tilbage
+            <span aria-hidden="true">←</span>
           </Button>
-          {isLastQuestion ? (
-            <Button
-              size="md"
-              className="w-full"
-              onClick={() => void submitAttempt(false)}
-              disabled={isPending || saveState === "saving"}
-            >
-              Aflever
-            </Button>
-          ) : (
-            <Button
-              size="md"
-              className="w-full"
-              onClick={goToNextQuestion}
-            >
-              Næste
-            </Button>
-          )}
-        </div>
-        {!isLastQuestion ? (
           <Button
             variant="ghost"
             size="md"
-            className="w-full"
+            className="w-full px-2"
+            onClick={() => setIsOverviewOpen(true)}
+          >
+            Oversigt
+          </Button>
+          <Button
+            size="md"
+            className="w-full px-2"
             onClick={() => void submitAttempt(false)}
             disabled={isPending || saveState === "saving"}
           >
-            Aflever prøve
+            Aflever
           </Button>
-        ) : null}
-      </section>
-    </div>
+          <Button
+            variant="secondary"
+            size="md"
+            className="w-full px-0"
+            onClick={goToNextQuestion}
+            disabled={isLastQuestion}
+            aria-label="Næste spørgsmål"
+          >
+            <span aria-hidden="true">→</span>
+          </Button>
+        </section>
+      </div>
+
+      {isOverviewOpen ? (
+        <>
+          <button
+            type="button"
+            aria-label="Luk spørgeoversigt"
+            className="participant-sheet-backdrop"
+            onClick={() => setIsOverviewOpen(false)}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Spørgeoversigt"
+            className="participant-sheet-panel"
+          >
+            <div className="mx-auto mb-4 h-1.5 w-16 rounded-full bg-black/15" />
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="kicker">Skift spørgsmål</p>
+                <p className="text-sm text-muted-foreground">
+                  Tryk på et nummer for at hoppe direkte.
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsOverviewOpen(false)}
+              >
+                Luk
+              </Button>
+            </div>
+            <QuestionNavigation
+              total={attempt.questions.length}
+              currentIndex={activeIndex}
+              answeredIndexes={answeredIndexes}
+              onSelect={(index) => {
+                setIsOverviewOpen(false);
+                goToQuestion(index);
+              }}
+            />
+          </section>
+        </>
+      ) : null}
+    </>
   );
 }

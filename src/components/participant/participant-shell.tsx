@@ -12,7 +12,7 @@ export function ParticipantShell({ children }: ParticipantShellProps) {
           <div className="logo-slot">DGI logo</div>
           <p className="kicker">Indoor Cycling Prøve</p>
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="min-h-0 flex-1">{children}</main>
       </div>
     </div>
   );
