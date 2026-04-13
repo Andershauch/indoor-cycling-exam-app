@@ -285,7 +285,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   }, []);
 
   return (
-    <div className="space-y-4 pb-28 pt-2">
+    <div className="space-y-4 pb-40 pt-2 sm:pb-44">
       <section className="participant-sticky-bar grid gap-3 p-3">
         <div className="flex items-center justify-between gap-3">
           <p className="kicker">Aktiv prøve</p>
@@ -360,6 +360,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           <Button
             variant="secondary"
             size="md"
+            className="w-full"
             onClick={goToPreviousQuestion}
             disabled={activeIndex === 0}
           >
@@ -368,6 +369,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           {isLastQuestion ? (
             <Button
               size="md"
+              className="w-full"
               onClick={() => void submitAttempt(false)}
               disabled={isPending || saveState === "saving"}
             >
@@ -376,6 +378,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           ) : (
             <Button
               size="md"
+              className="w-full"
               onClick={goToNextQuestion}
             >
               Næste
@@ -386,6 +389,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           <Button
             variant="ghost"
             size="md"
+            className="w-full"
             onClick={() => void submitAttempt(false)}
             disabled={isPending || saveState === "saving"}
           >

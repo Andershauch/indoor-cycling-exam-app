@@ -224,10 +224,13 @@ svg {
 }
 
 .participant-footer-nav {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100vw - 1.5rem), 34rem);
   z-index: 20;
-  margin-inline: -0.1rem;
+  margin-inline: 0;
   border-top: 1.5px solid rgba(17, 17, 17, 0.1);
   border-right: 1.5px solid rgba(17, 17, 17, 0.06);
   border-left: 1.5px solid rgba(17, 17, 17, 0.06);
