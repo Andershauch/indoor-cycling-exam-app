@@ -142,6 +142,53 @@ export async function getActiveExamAdminSnapshot() {
   };
 }
 
+export async function getAdminDashboardSnapshot() {
+  const [examSnapshot, reportSnapshot] = await Promise.all([
+    getActiveExamAdminSnapshot(),
+    getAdminReportsSnapshot(),
+  ]);
+
+  if (!examSnapshot || !reportSnapshot) {
+    return null;
+  }
+
+  const invitationSnapshot = await getPrismaClient().invitation.groupBy({
+    by: ["status"],
+    where: {
+      examSetId: examSnapshot.examSet.id,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  const invitationCounts = invitationSnapshot.reduce<Record<string, number>>((result, entry) => {
+    result[entry.status] = entry._count._all;
+    return result;
+  }, {});
+
+  return {
+    exam: examSnapshot.examSet,
+    stats: examSnapshot.stats,
+    reportStats: reportSnapshot.stats,
+    recentAttempts: examSnapshot.recentAttempts,
+    invitationStats: {
+      total:
+        (invitationCounts.CREATED ?? 0) +
+        (invitationCounts.SENT ?? 0) +
+        (invitationCounts.OPENED ?? 0) +
+        (invitationCounts.COMPLETED ?? 0) +
+        (invitationCounts.EXPIRED ?? 0),
+      created: invitationCounts.CREATED ?? 0,
+      sent: invitationCounts.SENT ?? 0,
+      opened: invitationCounts.OPENED ?? 0,
+      completed: invitationCounts.COMPLETED ?? 0,
+      expired: invitationCounts.EXPIRED ?? 0,
+    },
+    hardestQuestions: reportSnapshot.hardestQuestions.slice(0, 3),
+  };
+}
+
 function normaliseReportFilters(filters?: ReportFilters) {
   return {
     query: filters?.query?.trim() ?? "",

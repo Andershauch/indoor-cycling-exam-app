@@ -16,6 +16,7 @@ import {
   parseQuestionFormData,
   resequenceExamQuestions,
 } from "@/lib/admin/data";
+import { parseParticipantBatchFile } from "@/lib/admin/participant-batch-import";
 import { getPrismaClient } from "@/lib/db/prisma";
 import { InvitationChannel } from "@prisma/client";
 import { createAndDispatchInvitation } from "@/lib/invitations/service";
@@ -351,4 +352,79 @@ export async function createInvitationAction(formData: FormData) {
 
   revalidatePath("/invitations");
   redirect("/invitations");
+}
+
+export async function createBatchInvitationsAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const prisma = getPrismaClient();
+  const examSet = await prisma.examSet.findFirst({
+    where: {
+      isActive: true,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!examSet) {
+    redirect(`/invitations?${new URLSearchParams({ batchError: "Ingen aktiv prøve" }).toString()}`);
+  }
+
+  const upload = formData.get("batchFile");
+
+  if (!(upload instanceof File) || upload.size === 0) {
+    redirect(`/invitations?${new URLSearchParams({ batchError: "Vælg en Excel-fil" }).toString()}`);
+  }
+
+  const adminUser = await prisma.adminUser.findUnique({
+    where: {
+      email: session.email,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  try {
+    const parsed = await parseParticipantBatchFile(upload);
+
+    if (parsed.entries.length === 0) {
+      redirect(
+        `/invitations?${new URLSearchParams({ batchError: "Ingen gyldige deltagere fundet i filen" }).toString()}`,
+      );
+    }
+
+    let createdCount = 0;
+    let failedCount = 0;
+
+    for (const participant of parsed.entries) {
+      try {
+        await createAndDispatchInvitation({
+          examSetId: examSet.id,
+          createdByAdminId: adminUser?.id ?? null,
+          channel: InvitationChannel.EMAIL,
+          recipientName: participant.name,
+          recipientEmail: participant.email,
+          recipientPhone: null,
+        });
+        createdCount += 1;
+      } catch {
+        failedCount += 1;
+      }
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/invitations");
+    redirect(`/invitations?${new URLSearchParams({
+      batchOk: "1",
+      created: String(createdCount),
+      failed: String(failedCount),
+      ignored: String(parsed.ignoredRowCount),
+    }).toString()}`);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Excel-filen kunne ikke behandles";
+
+    redirect(`/invitations?${new URLSearchParams({ batchError: message }).toString()}`);
+  }
 }

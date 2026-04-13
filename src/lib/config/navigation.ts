@@ -13,7 +13,8 @@ export const primaryNavigation: NavigationItem[] = [
 ];
 
 export const adminNavigation: NavigationItem[] = [
-  { href: "/admin", label: "Admin" },
+  { href: "/admin", label: "Overblik" },
+  { href: "/questions", label: "Spørgsmål" },
   { href: "/invitations", label: "Invitationer" },
   { href: "/reports", label: "Rapporter" },
 ];

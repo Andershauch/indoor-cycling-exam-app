@@ -3,10 +3,24 @@ import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/text-input";
-import { createInvitationAction, logoutAdminAction } from "@/lib/admin/actions";
+import {
+  createBatchInvitationsAction,
+  createInvitationAction,
+  logoutAdminAction,
+} from "@/lib/admin/actions";
 import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
 export const dynamic = "force-dynamic";
+
+type InvitationsPageProps = {
+  searchParams: Promise<{
+    batchOk?: string;
+    batchError?: string;
+    created?: string;
+    failed?: string;
+    ignored?: string;
+  }>;
+};
 
 const columns = [
   { key: "recipient", label: "Deltager" },
@@ -44,8 +58,11 @@ function formatStatus(status: string) {
   }
 }
 
-export default async function InvitationsPage() {
-  const snapshot = await getAdminInvitationsSnapshot();
+export default async function InvitationsPage({ searchParams }: InvitationsPageProps) {
+  const [params, snapshot] = await Promise.all([
+    searchParams,
+    getAdminInvitationsSnapshot(),
+  ]);
 
   if (!snapshot) {
     return (
@@ -58,6 +75,11 @@ export default async function InvitationsPage() {
       </div>
     );
   }
+
+  const statusCounts = snapshot.invitations.reduce<Record<string, number>>((result, invitation) => {
+    result[invitation.status] = (result[invitation.status] ?? 0) + 1;
+    return result;
+  }, {});
 
   const rows = snapshot.invitations.map((invitation) => ({
     recipient: (
@@ -103,19 +125,63 @@ export default async function InvitationsPage() {
     <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
       <PageHeader
         eyebrow="Invitationer"
-        title="SEND PRØVELINK"
-        description="Invitationer oprettes med sikkert token og kan spores fra created til completed."
+        title="UDSENDELSER OG BATCH-UPLOAD"
+        description="Admin kan sende én invitation ad gangen eller uploade en Excel-fil. Ved batch bruges kun deltagernes navn og e-mail."
         actions={
-          <form action={logoutAdminAction}>
-            <Button type="submit" variant="secondary" size="lg">
-              Log ud
+          <div className="flex flex-wrap gap-3">
+            <Button href="/admin" variant="secondary" size="lg">
+              Til overblik
             </Button>
-          </form>
+            <form action={logoutAdminAction}>
+              <Button type="submit" variant="secondary" size="lg">
+                Log ud
+              </Button>
+            </form>
+          </div>
         }
       />
 
+      {params.batchOk ? (
+        <Card tone="strong" title="Batch-upload gennemført" eyebrow="Importstatus">
+          <p className="text-base leading-7 text-foreground">
+            Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:
+            {" "}
+            {params.ignored ?? "0"}
+          </p>
+        </Card>
+      ) : null}
+
+      {params.batchError ? (
+        <Card title="Batch-upload kunne ikke gennemføres" eyebrow="Fejl">
+          <p className="text-base leading-7 text-danger">{params.batchError}</p>
+        </Card>
+      ) : null}
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <Card className="space-y-2">
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Created</p>
+          <p className="font-display text-4xl">{statusCounts.CREATED ?? 0}</p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Sent</p>
+          <p className="font-display text-4xl">{statusCounts.SENT ?? 0}</p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Opened</p>
+          <p className="font-display text-4xl">{statusCounts.OPENED ?? 0}</p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Completed</p>
+          <p className="font-display text-4xl">{statusCounts.COMPLETED ?? 0}</p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Expired</p>
+          <p className="font-display text-4xl">{statusCounts.EXPIRED ?? 0}</p>
+        </Card>
+      </section>
+
       <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card title="Ny invitation" eyebrow="Udsendelse">
+        <Card title="Ny enkeltinvitation" eyebrow="Manuel oprettelse">
           <form action={createInvitationAction} className="grid gap-4">
             <TextInput
               id="recipient-name"
@@ -151,25 +217,36 @@ export default async function InvitationsPage() {
               </label>
             </fieldset>
 
-            <div className="flex flex-wrap gap-3">
-              <Button type="submit" size="lg">
-                Opret invitation
-              </Button>
-            </div>
+            <Button type="submit" size="lg">
+              Opret invitation
+            </Button>
           </form>
         </Card>
 
-        <Card title="Providerstruktur" eyebrow="Klargjort" className="space-y-4">
+        <Card title="Batch-upload fra Excel" eyebrow="Gruppeopsætning" className="space-y-4">
           <p className="text-sm leading-7 text-muted-foreground">
-            Udsendelse går gennem små service-abstraktioner for mail og sms, så rigtig
-            providerintegration kan sættes på uden at ændre admin-UI eller invitationmodellen.
+            Upload en deltagerliste i Excel-format. Systemet læser kun kolonnerne
+            <strong> Fulde navn</strong> og <strong>E-mailadresse</strong> og ignorerer alt andet.
           </p>
-          <ul className="space-y-2 text-sm leading-6">
-            <li>`MAIL_PROVIDER_API_KEY` og `RESEND_FROM_EMAIL` styrer mail.</li>
-            <li>`SMS_PROVIDER_API_KEY` styrer sms.</li>
-            <li>Hvis credentials mangler, bliver invitationen stadig oprettet og sporbar.</li>
-            <li>Linket peger direkte på `/invite/[token]` og starter eller genoptager prøven.</li>
-          </ul>
+          <form action={createBatchInvitationsAction} className="grid gap-4">
+            <label className="grid gap-2">
+              <span className="text-sm font-bold uppercase tracking-[0.08em]">Excel-fil</span>
+              <input
+                type="file"
+                name="batchFile"
+                accept=".xlsx,.xls"
+                className="min-h-12 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 py-3 text-base text-foreground focus-visible:outline-none"
+              />
+            </label>
+            <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
+              <li>Kun navn og e-mail bliver gemt og brugt til invitationerne.</li>
+              <li>Tommer rækker, dubletter og rækker uden gyldig e-mail bliver ignoreret.</li>
+              <li>Batch-upload sender invitationerne som e-mail med det samme.</li>
+            </ul>
+            <Button type="submit" size="lg">
+              Opret batch-invitationer
+            </Button>
+          </form>
         </Card>
       </section>
 
