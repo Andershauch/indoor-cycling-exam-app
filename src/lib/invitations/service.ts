@@ -163,7 +163,136 @@ export async function getAdminInvitationsSnapshot() {
   };
 }
 
-export async function resolveInvitationStart(token: string) {
+export async function getInvitationEntryState(token: string) {
+  const prisma = getPrismaClient();
+  const invitation = await prisma.invitation.findUnique({
+    where: {
+      token,
+    },
+    include: {
+      examSet: {
+        include: {
+          examQuestions: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      },
+      attempts: {
+        orderBy: {
+          startedAt: "desc",
+        },
+        take: 1,
+      },
+    },
+  });
+
+  if (!invitation) {
+    return {
+      state: "invalid" as const,
+    };
+  }
+
+  const isExpired = invitation.expiresAt ? invitation.expiresAt.getTime() <= Date.now() : false;
+
+  if (isExpired) {
+    await prisma.invitation.update({
+      where: {
+        id: invitation.id,
+      },
+      data: {
+        status: InvitationStatus.EXPIRED,
+      },
+    });
+
+    return {
+      state: "expired" as const,
+      invitation: {
+        recipientName: invitation.recipientName,
+        examTitle: invitation.examSet.title,
+      },
+    };
+  }
+
+  const latestAttempt = invitation.attempts[0];
+  const hasActiveAttempt = latestAttempt?.status === AttemptStatus.IN_PROGRESS;
+
+  if (hasActiveAttempt) {
+    if (invitation.status === InvitationStatus.CREATED || invitation.status === InvitationStatus.SENT) {
+      await prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          status: InvitationStatus.OPENED,
+          openedAt: invitation.openedAt ?? new Date(),
+        },
+      });
+    }
+
+    return {
+      state: "exam" as const,
+      attemptId: latestAttempt.id,
+    };
+  }
+
+  if (
+    latestAttempt &&
+    (latestAttempt.status === AttemptStatus.SUBMITTED ||
+      latestAttempt.status === AttemptStatus.AUTO_SUBMITTED)
+  ) {
+    if (invitation.status !== InvitationStatus.COMPLETED) {
+      await prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          status: InvitationStatus.COMPLETED,
+          completedAt: new Date(),
+        },
+      });
+    }
+
+    return {
+      state: "result" as const,
+      attemptId: latestAttempt.id,
+      invitation: {
+        recipientName: invitation.recipientName,
+        examTitle: invitation.examSet.title,
+      },
+    };
+  }
+
+  if (invitation.status === InvitationStatus.CREATED || invitation.status === InvitationStatus.SENT) {
+    await prisma.invitation.update({
+      where: {
+        id: invitation.id,
+      },
+      data: {
+        status: InvitationStatus.OPENED,
+        openedAt: invitation.openedAt ?? new Date(),
+      },
+    });
+  }
+
+  return {
+    state: hasActiveAttempt ? ("resume" as const) : ("start" as const),
+    attemptId: hasActiveAttempt ? latestAttempt.id : null,
+    invitation: {
+      id: invitation.id,
+      recipientName: invitation.recipientName,
+      recipientEmail: invitation.recipientEmail,
+      recipientPhone: invitation.recipientPhone,
+      examTitle: invitation.examSet.title,
+      timeLimitMinutes: invitation.examSet.timeLimitMinutes,
+      totalQuestionCount: invitation.examSet.examQuestions.length,
+      openedAt: invitation.openedAt,
+    },
+  };
+}
+
+export async function startInvitationAttempt(token: string) {
   const prisma = getPrismaClient();
   const invitation = await prisma.invitation.findUnique({
     where: {
@@ -200,7 +329,6 @@ export async function resolveInvitationStart(token: string) {
 
     return {
       state: "expired" as const,
-      invitation,
     };
   }
 

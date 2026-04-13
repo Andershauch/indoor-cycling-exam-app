@@ -3,8 +3,6 @@ import { AttemptStatus } from "@prisma/client";
 
 import { AnswerChoice } from "@/components/ui/answer-choice";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { getAttemptSnapshot, isAttemptExpired, submitAttempt } from "@/lib/exam/service";
 
@@ -37,51 +35,68 @@ export default async function AttemptResultPage({
   );
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
-      <PageHeader
-        eyebrow="Resultat"
-        title={passed ? "DU HAR BESTÅET" : "DU HAR IKKE BESTÅET"}
-        description="Resultatet er beregnet direkte ved aflevering på baggrund af dine senest gemte svar."
-      />
+    <div className="space-y-4 pb-8 pt-2">
+      <section className="participant-score-card">
+        <div className="space-y-3">
+          <p className="kicker text-inverse-foreground/80">Resultat</p>
+          <h1 className="participant-title text-inverse-foreground">
+            {passed ? "Bestået" : "Ikke bestået"}
+          </h1>
+          <p className="text-base leading-7 text-inverse-foreground/78">
+            Resultatet er beregnet på baggrund af dine senest gemte svar.
+          </p>
+        </div>
+        <div className="space-y-3">
+          <p className="participant-score-value">{Math.round(attempt.scorePercentage ?? 0)}%</p>
+          <p className="text-lg font-bold">
+            {attempt.correctAnswerCount ?? 0} rigtige ud af {attempt.totalQuestionCount}
+          </p>
+        </div>
+        <ProgressBar
+          value={attempt.scorePercentage ?? 0}
+          label="Opnået score"
+          className="text-inverse-foreground"
+        />
+      </section>
 
-      <section className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
-        <Card tone="contrast" className="space-y-6">
-          <div className="space-y-3">
-            <p className="kicker text-inverse-foreground/80">Samlet score</p>
-            <p className="font-display text-[4.5rem] leading-none">
-              {Math.round(attempt.scorePercentage ?? 0)}%
-            </p>
-            <p className="text-lg font-bold">
-              {attempt.correctAnswerCount ?? 0} rigtige ud af {attempt.totalQuestionCount}
-            </p>
-          </div>
-          <ProgressBar
-            value={attempt.scorePercentage ?? 0}
-            label="Opnået score"
-          />
-          <div className="flex flex-wrap gap-3">
-            <Button href="/" variant="contrast" size="lg">
-              Til forsiden
-            </Button>
-          </div>
-        </Card>
+      <section className="participant-surface grid gap-4 p-6">
+        <div className="space-y-2">
+          <p className="kicker">Afslutning</p>
+          <h2 className="section-title">
+            {passed ? "Du er i mål" : "Tak for din besvarelse"}
+          </h2>
+          <p className="participant-lead">
+            {passed
+              ? "Din prøve er registreret som bestået."
+              : "Din besvarelse er registreret. Kontakt underviseren, hvis du vil følge op på resultatet."}
+          </p>
+        </div>
+        <Button href="/" size="lg">
+          Til forsiden
+        </Button>
+      </section>
 
-        <Card title="Gennemgang" eyebrow="Svaroversigt" className="space-y-4">
+      <section className="participant-surface grid gap-4 p-6">
+        <div className="space-y-2">
+          <p className="kicker">Svaroversigt</p>
+          <h2 className="section-title">Se dine svar</h2>
+        </div>
+        <div className="grid gap-5">
           {attempt.questions.map((question) => {
             const answer = answerState.get(question.examQuestionId);
 
             return (
-              <div
+              <article
                 key={question.examQuestionId}
-                className="space-y-3 border-b border-border-soft pb-4 last:border-b-0 last:pb-0"
+                className="grid gap-3 border-b border-border-soft pb-5 last:border-b-0 last:pb-0"
               >
-                <p className="text-sm font-bold uppercase tracking-[0.08em]">
-                  Spørgsmål {question.position}
-                </p>
-                <p className="text-lg font-bold leading-snug">
-                  {question.questionText}
-                </p>
                 <div className="space-y-2">
+                  <p className="participant-status-chip">
+                    Spørgsmål {question.position}
+                  </p>
+                  <h3 className="text-xl font-bold leading-snug">{question.questionText}</h3>
+                </div>
+                <div className="grid gap-2">
                   {question.options.map((option) => {
                     const isSelected = answer?.selectedOptionId === option.id;
                     const state =
@@ -107,10 +122,10 @@ export default async function AttemptResultPage({
                     );
                   })}
                 </div>
-              </div>
+              </article>
             );
           })}
-        </Card>
+        </div>
       </section>
     </div>
   );

@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import { QuestionNavigation } from "@/components/exam/question-navigation";
 import { AnswerChoice } from "@/components/ui/answer-choice";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { TimerBadge } from "@/components/ui/timer-badge";
 import type { AttemptExamSnapshot } from "@/lib/exam/types";
@@ -40,7 +38,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   });
   const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
   const [saveMessage, setSaveMessage] = useState(
-    "Dine svar gemmes løbende, så du ikke mister data ved refresh.",
+    "Dine svar gemmes løbende, så du ikke mister noget undervejs.",
   );
   const [timeLeft, setTimeLeft] = useState(() => {
     return Math.max(0, new Date(attempt.expiresAt).getTime() - Date.now());
@@ -54,6 +52,8 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   const answeredIndexes = attempt.questions.flatMap((question, index) =>
     answers.get(question.examQuestionId) ? [index] : [],
   );
+  const currentAnswer = answers.get(currentQuestion.examQuestionId) ?? null;
+  const isLastQuestion = activeIndex === attempt.questions.length - 1;
 
   async function persistProgress(nextIndex: number) {
     pendingSaveCountRef.current += 1;
@@ -165,7 +165,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   async function submitAttempt(automatic: boolean) {
     if (!automatic) {
       const confirmed = window.confirm(
-        "Vil du aflevere prøven nu? Du kan ikke ændre svar bagefter.",
+        "Vil du aflevere prøven nu? Du kan ikke ændre dine svar bagefter.",
       );
 
       if (!confirmed) {
@@ -215,10 +215,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      const nextValue = Math.max(
-        0,
-        new Date(attempt.expiresAt).getTime() - Date.now(),
-      );
+      const nextValue = Math.max(0, new Date(attempt.expiresAt).getTime() - Date.now());
 
       setTimeLeft(nextValue);
 
@@ -245,108 +242,120 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   }, []);
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
-      <PageHeader
-        eyebrow="Prøve"
-        title={`SPØRGSMÅL ${String(activeIndex + 1).padStart(2, "0")}`}
-        description={`Du kan gå frem og tilbage og ændre dine svar helt frem til aflevering.`}
-        actions={
+    <div className="space-y-4 pb-28 pt-2">
+      <section className="participant-sticky-bar grid gap-4 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <p className="kicker">Aktiv prøve</p>
+            <div className="flex flex-wrap gap-2">
+              <span className="participant-status-chip">
+                Spørgsmål {activeIndex + 1} af {attempt.questions.length}
+              </span>
+              {currentAnswer ? (
+                <span className="participant-status-chip">Svar valgt</span>
+              ) : (
+                <span className="participant-status-chip">Afventer svar</span>
+              )}
+            </div>
+          </div>
           <TimerBadge
             value={formatTimeLeft(timeLeft)}
             tone={timeLeft <= 60_000 ? "danger" : timeLeft <= 5 * 60_000 ? "warning" : "default"}
+            className="shrink-0"
           />
-        }
-      />
+        </div>
+        <ProgressBar
+          value={answeredIndexes.length}
+          max={attempt.questions.length}
+          label="Besvaret"
+        />
+      </section>
 
-      <section className="grid gap-5 lg:grid-cols-[0.82fr_1.18fr]">
-        <Card tone="strong" className="space-y-5">
-          <ProgressBar
-            value={answeredIndexes.length}
-            max={attempt.questions.length}
-            label="Besvaret"
-          />
+      <details className="participant-surface p-5">
+        <summary className="cursor-pointer list-none text-sm font-bold uppercase tracking-[0.08em]">
+          Se spørgeoversigt
+        </summary>
+        <div className="mt-4">
           <QuestionNavigation
             total={attempt.questions.length}
             currentIndex={activeIndex}
             answeredIndexes={answeredIndexes}
             onSelect={goToQuestion}
           />
-          <div className="space-y-3">
-            <p className="text-sm font-bold uppercase tracking-[0.08em]">Status</p>
-            <p
-              aria-live="polite"
-              className="text-base leading-7 text-muted-foreground"
-            >
-              {saveMessage}
-            </p>
-          </div>
+        </div>
+      </details>
+
+      <section className="participant-surface grid gap-6 p-6">
+        <div className="space-y-3">
+          <p className="kicker">{currentQuestion.category ?? "Fast prøve"}</p>
+          <h1 className="section-title">
+            Spørgsmål {String(activeIndex + 1).padStart(2, "0")}
+          </h1>
+          <p className="text-2xl font-bold leading-snug text-balance">
+            {currentQuestion.questionText}
+          </p>
+        </div>
+
+        <fieldset className="grid gap-3">
+          <legend className="sr-only">Vælg det bedste svar</legend>
+          {currentQuestion.options.map((option) => (
+            <AnswerChoice
+              key={option.id}
+              id={option.id}
+              name={currentQuestion.examQuestionId}
+              label={option.label}
+              text={option.text}
+              checked={currentAnswer === option.id}
+              onChange={() => void handleSelectAnswer(currentQuestion.examQuestionId, option.id)}
+              state={currentAnswer === option.id ? "selected" : "default"}
+            />
+          ))}
+        </fieldset>
+
+        <div className="rounded-[1.25rem] border border-border-soft bg-white/55 p-4">
+          <p aria-live="polite" className="text-sm leading-6 text-muted-foreground">
+            {saveMessage}
+          </p>
+        </div>
+      </section>
+
+      <section className="participant-footer-nav grid gap-4 p-4">
+        <div className="grid grid-cols-2 gap-3">
           <Button
             variant="secondary"
             size="lg"
+            onClick={() => goToQuestion(Math.max(0, activeIndex - 1))}
+            disabled={activeIndex === 0}
+          >
+            Tilbage
+          </Button>
+          {isLastQuestion ? (
+            <Button
+              size="lg"
+              onClick={() => void submitAttempt(false)}
+              disabled={isPending || saveState === "saving"}
+            >
+              Aflever
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              onClick={() => goToQuestion(Math.min(attempt.questions.length - 1, activeIndex + 1))}
+            >
+              Næste
+            </Button>
+          )}
+        </div>
+        {!isLastQuestion ? (
+          <Button
+            variant="ghost"
+            size="md"
             onClick={() => void submitAttempt(false)}
             disabled={isPending || saveState === "saving"}
           >
             Aflever prøve
           </Button>
-        </Card>
-
-        <Card className="space-y-6">
-          <div className="space-y-3">
-            <p className="kicker">
-              {currentQuestion.category ?? "Fast prøve"}
-            </p>
-            <h2 className="section-title">VÆLG DET BEDSTE SVAR</h2>
-            <p className="text-xl font-bold leading-snug">
-              {currentQuestion.questionText}
-            </p>
-          </div>
-
-          <fieldset className="space-y-3">
-            <legend className="sr-only">
-              Vælg det bedste svar til spørgsmålet
-            </legend>
-            {currentQuestion.options.map((option) => (
-              <AnswerChoice
-                key={option.id}
-                id={option.id}
-                name={currentQuestion.examQuestionId}
-                label={option.label}
-                text={option.text}
-                checked={answers.get(currentQuestion.examQuestionId) === option.id}
-                onChange={() =>
-                  void handleSelectAnswer(currentQuestion.examQuestionId, option.id)
-                }
-                state={
-                  answers.get(currentQuestion.examQuestionId) === option.id
-                    ? "selected"
-                    : "default"
-                }
-              />
-            ))}
-          </fieldset>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={() => goToQuestion(Math.max(0, activeIndex - 1))}
-              disabled={activeIndex === 0}
-            >
-              Tilbage
-            </Button>
-            <Button
-              size="lg"
-              onClick={() =>
-                goToQuestion(
-                  Math.min(attempt.questions.length - 1, activeIndex + 1),
-                )
-              }
-              disabled={activeIndex === attempt.questions.length - 1}
-            >
-              Næste spørgsmål
-            </Button>
-          </div>
-        </Card>
+        ) : null}
       </section>
     </div>
   );
