@@ -422,6 +422,16 @@ export async function createBatchInvitationsAction(formData: FormData) {
       ignored: String(parsed.ignoredRowCount),
     }).toString()}`);
   } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "digest" in error &&
+      typeof error.digest === "string" &&
+      error.digest.startsWith("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
+
     const message =
       error instanceof Error ? error.message : "Excel-filen kunne ikke behandles";
 
