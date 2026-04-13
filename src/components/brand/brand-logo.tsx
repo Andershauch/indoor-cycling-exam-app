@@ -8,8 +8,8 @@ type BrandLogoProps = {
 };
 
 const sizeClasses: Record<NonNullable<BrandLogoProps["size"]>, string> = {
-  sm: "h-9 w-[7.75rem]",
-  md: "h-11 w-[9.5rem]",
+  sm: "h-9 w-[7.75rem] shrink-0 self-start",
+  md: "h-11 w-[9.5rem] shrink-0 self-start",
 };
 
 export function BrandLogo({ className, size = "md" }: BrandLogoProps) {
@@ -20,7 +20,7 @@ export function BrandLogo({ className, size = "md" }: BrandLogoProps) {
         alt="DGI"
         width={180}
         height={60}
-        className="h-full w-full object-contain"
+        className="block h-full w-full object-contain object-left"
         priority
       />
     </span>
