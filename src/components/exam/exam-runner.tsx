@@ -47,6 +47,8 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
   const pendingSaveCountRef = useRef(0);
   const pendingAnswerSaveRef = useRef<Promise<void> | null>(null);
   const pendingProgressRef = useRef<Promise<void> | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchEndRef = useRef<{ x: number; y: number } | null>(null);
 
   const currentQuestion = attempt.questions[activeIndex];
   const answeredIndexes = attempt.questions.flatMap((question, index) =>
@@ -162,6 +164,47 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
     });
   }
 
+  function goToPreviousQuestion() {
+    goToQuestion(Math.max(0, activeIndex - 1));
+  }
+
+  function goToNextQuestion() {
+    goToQuestion(Math.min(attempt.questions.length - 1, activeIndex + 1));
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLElement>) {
+    const touch = event.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchEndRef.current = null;
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLElement>) {
+    const touch = event.touches[0];
+    touchEndRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleTouchEnd() {
+    if (!touchStartRef.current || !touchEndRef.current) {
+      return;
+    }
+
+    const deltaX = touchEndRef.current.x - touchStartRef.current.x;
+    const deltaY = touchEndRef.current.y - touchStartRef.current.y;
+    const horizontalSwipe = Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25;
+
+    if (!horizontalSwipe) {
+      return;
+    }
+
+    if (deltaX < 0 && activeIndex < attempt.questions.length - 1) {
+      goToNextQuestion();
+    }
+
+    if (deltaX > 0 && activeIndex > 0) {
+      goToPreviousQuestion();
+    }
+  }
+
   async function submitAttempt(automatic: boolean) {
     if (!automatic) {
       const confirmed = window.confirm(
@@ -256,6 +299,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
               ) : (
                 <span className="participant-status-chip">Afventer svar</span>
               )}
+              <span className="participant-status-chip">Swipe for næste</span>
             </div>
           </div>
           <TimerBadge
@@ -285,13 +329,18 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
         </div>
       </details>
 
-      <section className="participant-surface grid gap-6 p-6">
+      <section
+        className="participant-question-card participant-surface grid gap-5 p-5 sm:gap-6 sm:p-6"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="space-y-3">
           <p className="kicker">{currentQuestion.category ?? "Fast prøve"}</p>
           <h1 className="section-title">
             Spørgsmål {String(activeIndex + 1).padStart(2, "0")}
           </h1>
-          <p className="text-2xl font-bold leading-snug text-balance">
+          <p className="text-xl font-bold leading-snug text-balance sm:text-2xl">
             {currentQuestion.questionText}
           </p>
         </div>
@@ -324,7 +373,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           <Button
             variant="secondary"
             size="lg"
-            onClick={() => goToQuestion(Math.max(0, activeIndex - 1))}
+            onClick={goToPreviousQuestion}
             disabled={activeIndex === 0}
           >
             Tilbage
@@ -340,7 +389,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
           ) : (
             <Button
               size="lg"
-              onClick={() => goToQuestion(Math.min(attempt.questions.length - 1, activeIndex + 1))}
+              onClick={goToNextQuestion}
             >
               Næste
             </Button>

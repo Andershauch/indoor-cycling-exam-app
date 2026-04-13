@@ -29,17 +29,17 @@ export function AnswerChoice({
     <label
       htmlFor={id}
       className={cn(
-        "flex cursor-pointer items-start gap-4 rounded-[var(--radius-md)] border-2 p-4 transition-colors sm:p-5",
+        "flex cursor-pointer items-start gap-3 rounded-[var(--radius-md)] border-2 p-3 transition-colors sm:gap-4 sm:p-5",
         stateClasses[state],
         className,
       )}
     >
       <input {...props} id={id} type="radio" className="sr-only" />
-      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-current font-display text-lg leading-none">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-current font-display text-base leading-none sm:h-10 sm:w-10 sm:text-lg">
         {label}
       </span>
       <span className="flex min-w-0 flex-col gap-2">
-        <span className="text-lg font-bold leading-snug text-balance">{text}</span>
+        <span className="text-base font-bold leading-snug text-balance sm:text-lg">{text}</span>
         {helper ? (
           <span className="text-sm leading-6 text-muted-foreground">{helper}</span>
         ) : null}
