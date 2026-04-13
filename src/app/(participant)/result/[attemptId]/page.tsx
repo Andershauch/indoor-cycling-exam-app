@@ -8,6 +8,41 @@ import { getAttemptSnapshot, isAttemptExpired, submitAttempt } from "@/lib/exam/
 
 export const dynamic = "force-dynamic";
 
+function ResultStatusIcon({ passed }: { passed: boolean }) {
+  if (passed) {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="h-10 w-10 shrink-0 text-[#6DFF9A] sm:h-12 sm:w-12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M5 12.5l4.2 4.2L19 7" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-10 w-10 shrink-0 text-[#FF6B6B] sm:h-12 sm:w-12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 7l10 10" />
+      <path d="M17 7L7 17" />
+    </svg>
+  );
+}
+
 export default async function AttemptResultPage({
   params,
 }: {
@@ -39,15 +74,21 @@ export default async function AttemptResultPage({
       <section className="participant-score-card">
         <div className="space-y-3">
           <p className="kicker text-inverse-foreground/80">Resultat</p>
-          <h1 className="participant-title text-inverse-foreground">
-            {passed ? "Bestået" : "Ikke bestået"}
-          </h1>
+          <div className="flex items-center gap-3">
+            <ResultStatusIcon passed={passed} />
+            <h1 className="participant-title text-inverse-foreground">
+              {passed ? "Bestået" : "Ikke bestået"}
+            </h1>
+          </div>
           <p className="text-base leading-7 text-inverse-foreground/78">
             Resultatet er beregnet på baggrund af dine senest gemte svar.
           </p>
         </div>
         <div className="space-y-3">
-          <p className="participant-score-value">{Math.round(attempt.scorePercentage ?? 0)}%</p>
+          <div className="flex items-center gap-3">
+            <ResultStatusIcon passed={passed} />
+            <p className="participant-score-value">{Math.round(attempt.scorePercentage ?? 0)}%</p>
+          </div>
           <p className="text-lg font-bold">
             {attempt.correctAnswerCount ?? 0} rigtige ud af {attempt.totalQuestionCount}
           </p>
@@ -71,7 +112,7 @@ export default async function AttemptResultPage({
               : "Din besvarelse er registreret. Kontakt underviseren, hvis du vil følge op på resultatet."}
           </p>
         </div>
-        <Button href="/" size="lg">
+        <Button href="/" size="lg" className="text-inverse-foreground">
           Til forsiden
         </Button>
       </section>

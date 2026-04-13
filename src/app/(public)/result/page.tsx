@@ -16,7 +16,7 @@ export default function ResultFallbackPage() {
             Start en prøve først, så bliver du sendt direkte til din personlige
             resultatside ved aflevering.
           </p>
-          <Button href="/exam" size="lg">
+          <Button href="/exam" size="lg" className="text-inverse-foreground">
             Gå til prøvestart
           </Button>
         </div>
