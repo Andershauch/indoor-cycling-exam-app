@@ -2,14 +2,14 @@ import Link from "next/link";
 
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { Button } from "@/components/ui/button";
-import { adminNavigation, primaryNavigation } from "@/lib/config/navigation";
+import { adminNavigation } from "@/lib/config/navigation";
 
 type SiteHeaderProps = {
   compact?: boolean;
 };
 
 export function SiteHeader({ compact = false }: SiteHeaderProps) {
-  const items = compact ? adminNavigation : primaryNavigation;
+  const items = compact ? adminNavigation : [];
 
   return (
     <header className="border-b-2 border-border bg-background/90">
@@ -21,22 +21,26 @@ export function SiteHeader({ compact = false }: SiteHeaderProps) {
               DGI Indoor Cycling
             </span>
           </Link>
-          <Button href="/design-system" variant="secondary" size="sm">
-            Style guide
-          </Button>
-        </div>
-        <nav className="flex flex-wrap gap-2">
-          {items.map((item) => (
-            <Button
-              key={item.href}
-              href={item.href}
-              variant="ghost"
-              size="sm"
-            >
-              {item.label}
+          {compact ? null : (
+            <Button href="/admin" variant="secondary" size="sm">
+              Admin
             </Button>
-          ))}
-        </nav>
+          )}
+        </div>
+        {items.length > 0 ? (
+          <nav className="flex flex-wrap gap-2">
+            {items.map((item) => (
+              <Button
+                key={item.href}
+                href={item.href}
+                variant="ghost"
+                size="sm"
+              >
+                {item.label}
+              </Button>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </header>
   );

@@ -1,123 +1,84 @@
-import { AnswerChoice } from "@/components/ui/answer-choice";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { TextInput } from "@/components/ui/text-input";
-import { TimerBadge } from "@/components/ui/timer-badge";
 
-const highlights = [
-  "Samme prøve og samme rækkefølge til alle deltagere",
-  "Tydelig undervisningsstil med markante overskrifter",
-  "Klar til auth, invitationer og rapportering i næste faser",
+const adminSteps = [
+  "Upload Excel med deltagere",
+  "Send prøvelinks ud på mail",
+  "Følg status undervejs",
+  "Se resultater når prøverne er færdige",
 ];
 
 export default function LandingPage() {
   return (
     <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
-      <PageHeader
-        eyebrow="Fast teoriprøve"
-        title="INDOOR CYCLING EXAM APP"
-        description="Et roligt og tydeligt prøvemiljø bygget i samme varme, undervisningsprægede stil som DGI-materialet."
-        actions={
-          <>
-            <Button href="/exam" size="lg">
-              Start prøve
-            </Button>
-            <Button href="/admin" variant="secondary" size="lg">
-              Gå til admin
-            </Button>
-          </>
-        }
-      />
+      <section className="hidden md:block">
+        <PageHeader
+          eyebrow="Admin"
+          title="ADMIN TIL UDDANNELSESFORLØBET"
+          description="Webversionen er adminværktøjet. Her uploader du deltagerlisten, sender prøvelinks og følger resultaterne undervejs i forløbet."
+          actions={
+            <>
+              <Button href="/admin" size="lg">
+                Åbn admin
+              </Button>
+              <Button href="/questions" variant="secondary" size="lg">
+                Spørgsmål
+              </Button>
+            </>
+          }
+        />
+      </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-        <Card className="space-y-6">
-          <div className="space-y-4">
-            <p className="kicker">Adgang</p>
-            <h2 className="section-title">START TRYGT OG TYDELIGT</h2>
-            <p className="content-copy">
-              Startskærmen skal føles som undervisningsmateriale, ikke som en
-              anonym quiz. Deltageren møder et enkelt flow med høj kontrast,
-              stærk retning og lav støj.
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <TextInput
-              id="navn"
-              label="Navn"
-              placeholder="Skriv dit navn"
-              hint="Kan senere kobles til invitation eller deltagerprofil."
-            />
-            <TextInput
-              id="kode"
-              label="Adgangskode"
-              placeholder="Indtast kode"
-              hint="Kan senere erstattes af personligt prøvelink."
-            />
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button size="lg">Gå videre</Button>
-            <Button variant="ghost" size="lg">
-              Se prøveinfo
-            </Button>
-          </div>
-        </Card>
-
-        <Card tone="strong" className="space-y-5">
-          <p className="kicker">Overblik</p>
-          <ul className="space-y-3">
-            {highlights.map((item) => (
-              <li key={item} className="text-lg font-bold leading-snug">
-                {item}
+      <section className="hidden gap-5 md:grid lg:grid-cols-[1.05fr_0.95fr]">
+        <Card title="Sådan bruges systemet" eyebrow="Workflow">
+          <ol className="grid gap-4 text-lg font-bold leading-snug">
+            {adminSteps.map((step, index) => (
+              <li key={step} className="flex items-start gap-3">
+                <span className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full border-2 border-border bg-surface-strong text-sm">
+                  {index + 1}
+                </span>
+                <span>{step}</span>
               </li>
             ))}
-          </ul>
-          <div className="space-y-3">
-            <TimerBadge value="30:00" />
-            <ProgressBar value={1} max={3} label="Prøvens faser" />
+          </ol>
+        </Card>
+
+        <Card title="Desktop først" eyebrow="Adminadgang" tone="strong">
+          <div className="space-y-4">
+            <p className="text-base leading-7 text-foreground">
+              Admin er lavet til web og desktop. Deltagerne skal ikke bruge forsiden,
+              men åbner deres personlige prøvelink direkte fra mailen på mobilen.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button href="/admin" size="lg">
+                Gå til admin
+              </Button>
+              <Button href="/reports" variant="secondary" size="lg">
+                Se rapporter
+              </Button>
+            </div>
           </div>
         </Card>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-        <Card title="Eksempel på spørgsmål" eyebrow="Spørgsmålskort">
-          <div className="space-y-4">
-            <p className="text-xl font-bold leading-snug">
-              Hvis du har smerter i knæet foran, er det typisk fordi?
+      <section className="md:hidden">
+        <Card tone="strong" className="space-y-5">
+          <div className="space-y-3">
+            <p className="kicker">Deltageradgang</p>
+            <h1 className="section-title">ÅBN DIT PRØVELINK FRA MAILEN</h1>
+            <p className="text-base leading-7 text-foreground">
+              På mobil bruges appen kun til selve prøven. Åbn det personlige link,
+              du har modtaget på mail, for at starte eller fortsætte.
             </p>
-            <div className="space-y-3">
-              <AnswerChoice
-                id="landing-a"
-                name="landing-answer"
-                label="A"
-                text="Styret er for lavt"
-              />
-              <AnswerChoice
-                id="landing-b"
-                name="landing-answer"
-                label="B"
-                text="Sadlen er for langt tilbage"
-              />
-              <AnswerChoice
-                id="landing-c"
-                name="landing-answer"
-                label="C"
-                text="Kørsel med for højt RPM eller tempo uden belastning"
-                checked
-                state="selected"
-                readOnly
-              />
-            </div>
           </div>
-        </Card>
-
-        <Card title="Visuel retning" eyebrow="Designnote">
-          <p className="content-copy text-foreground">
-            Designet bruger store gule flader, sorte display-overskrifter og
-            enkle hvide kontrastkort. Fokus er pædagogik, klarhed og høj
-            læsbarhed på mobil først.
-          </p>
+          <div className="rounded-[1rem] border-2 border-border bg-surface px-4 py-4">
+            <p className="text-sm font-bold uppercase tracking-[0.08em]">Vigtigt</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Hvis du er underviser eller admin, skal du åbne siden på en computer
+              og bruge adminområdet derfra.
+            </p>
+          </div>
         </Card>
       </section>
     </div>
