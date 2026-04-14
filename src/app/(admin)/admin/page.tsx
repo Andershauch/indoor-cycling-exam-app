@@ -101,6 +101,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       invitationStatus: invitation.status,
       latestAttemptStatus: invitation.latestAttemptStatus,
     });
+
     const scoreLabel =
       invitation.latestAttemptScore === null ? "—" : `${Math.round(invitation.latestAttemptScore)}%`;
 
@@ -116,9 +117,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       status: (
         <div className="space-y-1">
           <p className="font-bold">{statusLabel}</p>
-          <p className="text-xs text-muted-foreground">
-            Sendt: {formatDate(invitation.sentAt)}
-          </p>
+          <p className="text-xs text-muted-foreground">Sendt: {formatDate(invitation.sentAt)}</p>
         </div>
       ),
       result: scoreLabel,
@@ -146,10 +145,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </p>
       </div>
     ),
-    score:
-      attempt.scorePercentage === null
-        ? "—"
-        : `${Math.round(attempt.scorePercentage)}%`,
+    score: attempt.scorePercentage === null ? "—" : `${Math.round(attempt.scorePercentage)}%`,
     submitted: formatDate(attempt.submittedAt),
     actions: (
       <Button href={`/result/${attempt.id}`} variant="secondary" size="sm">
@@ -163,20 +159,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <PageHeader
         eyebrow="Admin"
         title="DELTAGERE, STATUS OG RESULTATER"
-        description="Det er her forløbet styres. Upload deltagerlisten, send prøvelinks og følg hvem der er sendt til, i gang og færdige."
+        description="Upload deltagerlisten med det samme, send prøvelinks ud og følg forløbet herfra."
         actions={
           <div className="flex flex-wrap gap-3">
             <Button href="/questions" variant="secondary" size="lg">
               Spørgsmål
             </Button>
             <Button href="/reports" variant="secondary" size="lg">
-              Alle rapporter
+              Se rapporter
             </Button>
-            <form action={logoutAdminAction}>
-              <Button type="submit" variant="secondary" size="lg">
-                Log ud
-              </Button>
-            </form>
           </div>
         }
       />
@@ -184,8 +175,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       {params.batchOk ? (
         <Card tone="strong" title="Batch-upload gennemført" eyebrow="Importstatus">
           <p className="text-base leading-7 text-foreground">
-            Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:
-            {" "}
+            Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:{" "}
             {params.ignored ?? "0"}
           </p>
         </Card>
@@ -225,7 +215,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card title="1. Upload deltagerliste" eyebrow="Batch fra Excel" className="space-y-4">
+        <Card title="Upload deltagerliste" eyebrow="Batch fra Excel" className="space-y-4">
           <p className="text-sm leading-7 text-muted-foreground">
             Upload Excel-filen med deltagerne. Systemet læser kun kolonnerne
             <strong> Fulde navn</strong> og <strong>E-mailadresse</strong> og ignorerer resten.
@@ -246,7 +236,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </form>
         </Card>
 
-        <Card title="2. Tilføj én deltager" eyebrow="Manuel fallback" className="space-y-4">
+        <Card title="Tilføj én deltager" eyebrow="Manuel fallback" className="space-y-4">
           <p className="text-sm leading-7 text-muted-foreground">
             Brug kun denne, hvis en enkelt deltager mangler efter batch-upload.
           </p>
@@ -272,7 +262,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </Card>
       </section>
 
-      <Card title="3. Deltagerliste og status" eyebrow="Live overblik" className="space-y-4">
+      <Card title="Deltagerliste og status" eyebrow="Live overblik" className="space-y-4">
         <AdminTable
           caption="Deltagere og status"
           columns={participantColumns}
@@ -281,7 +271,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         />
       </Card>
 
-      <Card title="4. Seneste resultater" eyebrow="Afleverede prøver" className="space-y-4">
+      <Card title="Seneste resultater" eyebrow="Afleverede prøver" className="space-y-4">
         <AdminTable
           caption="Seneste resultater"
           columns={resultColumns}
@@ -289,6 +279,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           emptyMessage="Ingen afleverede prøver endnu."
         />
       </Card>
+
+      <div className="flex justify-end">
+        <form action={logoutAdminAction}>
+          <Button type="submit" variant="secondary" size="sm">
+            Log ud
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
