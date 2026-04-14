@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/text-input";
 import { loginAdminAction } from "@/lib/admin/actions";
 import { getAdminSession, getAdminLoginConfig, isAdminLoginConfigured } from "@/lib/admin/auth";
@@ -38,57 +37,46 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
   const isConfigured = isAdminLoginConfigured();
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
-      <PageHeader
-        eyebrow="Admin-login"
-        title="LOG IND SOM ADMIN"
-        description="En enkel loginstruktur til fase 5. Senere kan den erstattes af egentlig auth uden at ændre admin-UI'et."
-      />
+    <div className="mx-auto w-full max-w-2xl">
+      <Card tone="strong" className="space-y-6 p-6 sm:p-8">
+        <div className="space-y-3">
+          <p className="kicker">Admin-login</p>
+          <h1 className="section-title">LOG IND</h1>
+          <p className="max-w-xl text-base leading-7 text-foreground">
+            Log ind for at uploade deltagerlisten og følge prøven undervejs.
+          </p>
+        </div>
 
-      <section className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-        <Card title="Adgang" eyebrow="Sikkerhed">
-          <form action={loginAdminAction} className="grid gap-4">
-            <TextInput
-              id="admin-email"
-              name="email"
-              type="email"
-              label="E-mail"
-              defaultValue={config.email}
-              placeholder="admin@example.com"
-              required
-            />
-            <TextInput
-              id="admin-password"
-              name="password"
-              type="password"
-              label="Adgangskode"
-              placeholder="Skriv adgangskode"
-              required
-              error={getErrorMessage(error) ?? undefined}
-            />
-            <Button type="submit" size="lg" disabled={!isConfigured}>
-              Log ind
-            </Button>
-          </form>
-        </Card>
+        <form action={loginAdminAction} className="grid gap-4">
+          <TextInput
+            id="admin-email"
+            name="email"
+            type="email"
+            label="E-mail"
+            defaultValue={config.email}
+            placeholder="admin@example.com"
+            required
+          />
+          <TextInput
+            id="admin-password"
+            name="password"
+            type="password"
+            label="Adgangskode"
+            placeholder="Skriv adgangskode"
+            required
+            error={getErrorMessage(error) ?? undefined}
+          />
+          <Button type="submit" size="lg" disabled={!isConfigured}>
+            Log ind
+          </Button>
+        </form>
 
-        <Card tone="strong" title="Opsætning" eyebrow="Miljø">
-          <div className="space-y-4 text-sm leading-7">
-            <p>
-              Denne fase bruger en let session-cookie og miljøvariabler til admin-login.
-            </p>
-            <p>
-              Sæt `ADMIN_LOGIN_EMAIL`, `ADMIN_LOGIN_PASSWORD` og
-              `ADMIN_SESSION_SECRET` i din lokale `.env`.
-            </p>
-            <p>
-              {isConfigured
-                ? "Login er konfigureret og klar til brug."
-                : "Login er ikke konfigureret endnu."}
-            </p>
-          </div>
-        </Card>
-      </section>
+        {!isConfigured ? (
+          <p className="text-sm leading-6 text-danger">
+            Admin-login er ikke konfigureret endnu. Tilføj miljøvariablerne først.
+          </p>
+        ) : null}
+      </Card>
     </div>
   );
 }

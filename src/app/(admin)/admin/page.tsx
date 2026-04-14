@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/text-input";
@@ -8,8 +7,7 @@ import {
   createInvitationAction,
   logoutAdminAction,
 } from "@/lib/admin/actions";
-import { getAdminDashboardSnapshot, getAdminReportsSnapshot } from "@/lib/admin/data";
-import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
+import { getAdminDashboardSnapshot } from "@/lib/admin/data";
 
 export const dynamic = "force-dynamic";
 
@@ -23,143 +21,27 @@ type AdminPageProps = {
   }>;
 };
 
-const participantColumns = [
-  { key: "participant", label: "Deltager" },
-  { key: "status", label: "Status" },
-  { key: "result", label: "Resultat" },
-  { key: "actions", label: "Handling", align: "right" as const },
-];
-
-const resultColumns = [
-  { key: "participant", label: "Seneste resultater" },
-  { key: "score", label: "Score" },
-  { key: "submitted", label: "Afleveret" },
-  { key: "actions", label: "Vis", align: "right" as const },
-];
-
-function formatDate(value: Date | null) {
-  if (!value) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("da-DK", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(value);
-}
-
-function formatParticipantStatus(input: {
-  invitationStatus: string;
-  latestAttemptStatus: string | null;
-}) {
-  if (input.latestAttemptStatus === "IN_PROGRESS") {
-    return "I gang";
-  }
-
-  if (input.latestAttemptStatus === "SUBMITTED" || input.latestAttemptStatus === "AUTO_SUBMITTED") {
-    return "Gennemført";
-  }
-
-  switch (input.invitationStatus) {
-    case "CREATED":
-      return "Oprettet";
-    case "SENT":
-      return "Sendt";
-    case "OPENED":
-      return "Åbnet";
-    case "COMPLETED":
-      return "Gennemført";
-    case "EXPIRED":
-      return "Udløbet";
-    default:
-      return input.invitationStatus;
-  }
-}
-
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const [params, dashboard, invitationSnapshot, reports] = await Promise.all([
-    searchParams,
-    getAdminDashboardSnapshot(),
-    getAdminInvitationsSnapshot(),
-    getAdminReportsSnapshot(),
-  ]);
+  const [params, dashboard] = await Promise.all([searchParams, getAdminDashboardSnapshot()]);
 
-  if (!dashboard || !invitationSnapshot || !reports) {
+  if (!dashboard) {
     return (
       <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
-          eyebrow="Admin"
+          eyebrow="Upload"
           title="INGEN AKTIV PRØVE"
-          description="Importér eller opret først en aktiv prøve, før deltagere og resultater kan styres her."
+          description="Importér eller opret først en aktiv prøve, før deltagere kan uploades her."
         />
       </div>
     );
   }
 
-  const participantRows = invitationSnapshot.invitations.map((invitation) => {
-    const statusLabel = formatParticipantStatus({
-      invitationStatus: invitation.status,
-      latestAttemptStatus: invitation.latestAttemptStatus,
-    });
-
-    const scoreLabel =
-      invitation.latestAttemptScore === null ? "—" : `${Math.round(invitation.latestAttemptScore)}%`;
-
-    return {
-      participant: (
-        <div className="space-y-1">
-          <p className="font-bold">{invitation.recipientName || "Ukendt deltager"}</p>
-          <p className="text-xs text-muted-foreground">
-            {invitation.recipientEmail || "Ingen e-mail"}
-          </p>
-        </div>
-      ),
-      status: (
-        <div className="space-y-1">
-          <p className="font-bold">{statusLabel}</p>
-          <p className="text-xs text-muted-foreground">Sendt: {formatDate(invitation.sentAt)}</p>
-        </div>
-      ),
-      result: scoreLabel,
-      actions: (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button href={invitation.invitationLink} variant="secondary" size="sm">
-            Link
-          </Button>
-          {invitation.latestAttemptId ? (
-            <Button href={`/result/${invitation.latestAttemptId}`} size="sm">
-              Resultat
-            </Button>
-          ) : null}
-        </div>
-      ),
-    };
-  });
-
-  const resultRows = reports.attempts.slice(0, 8).map((attempt) => ({
-    participant: (
-      <div className="space-y-1">
-        <p className="font-bold">{attempt.participantName || "Ukendt deltager"}</p>
-        <p className="text-xs text-muted-foreground">
-          {attempt.participantEmail || "Ingen e-mail"}
-        </p>
-      </div>
-    ),
-    score: attempt.scorePercentage === null ? "—" : `${Math.round(attempt.scorePercentage)}%`,
-    submitted: formatDate(attempt.submittedAt),
-    actions: (
-      <Button href={`/result/${attempt.id}`} variant="secondary" size="sm">
-        Åbn
-      </Button>
-    ),
-  }));
-
   return (
     <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
       <PageHeader
-        eyebrow="Admin"
-        title="DELTAGERE, STATUS OG RESULTATER"
-        description="Upload deltagerlisten med det samme, send prøvelinks ud og følg forløbet herfra."
+        eyebrow="Trin 1"
+        title="UPLOAD DELTAGERLISTE"
+        description="Upload Excel-filen og send prøvelinks ud. Når uploaden er gennemført, fortsætter du til statussiden."
         actions={
           <div className="flex flex-wrap gap-3">
             <Button href="/questions" variant="secondary" size="lg">
@@ -178,6 +60,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
             Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:{" "}
             {params.ignored ?? "0"}
           </p>
+          <div className="pt-2">
+            <Button href="/admin/status" size="lg">
+              Gå til status
+            </Button>
+          </div>
         </Card>
       ) : null}
 
@@ -187,30 +74,22 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </Card>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Deltagere</p>
-          <p className="font-display text-4xl">{invitationSnapshot.invitations.length}</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Aktiv prøve</p>
+          <p className="font-display text-4xl">1</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Sendt</p>
-          <p className="font-display text-4xl">{dashboard.invitationStats.sent}</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Beståelseskrav</p>
+          <p className="font-display text-4xl">{dashboard.exam.passPercentage}%</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Åbnet</p>
-          <p className="font-display text-4xl">{dashboard.invitationStats.opened}</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Tidsramme</p>
+          <p className="font-display text-4xl">30 min</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Gennemført</p>
-          <p className="font-display text-4xl">{dashboard.invitationStats.completed}</p>
-        </Card>
-        <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Bestået %</p>
-          <p className="font-display text-4xl">
-            {dashboard.reportStats.passRate === null
-              ? "—"
-              : `${Math.round(dashboard.reportStats.passRate)}%`}
-          </p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Kanal</p>
+          <p className="font-display text-4xl">Mail</p>
         </Card>
       </section>
 
@@ -262,25 +141,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         </Card>
       </section>
 
-      <Card title="Deltagerliste og status" eyebrow="Live overblik" className="space-y-4">
-        <AdminTable
-          caption="Deltagere og status"
-          columns={participantColumns}
-          rows={participantRows}
-          emptyMessage="Der er endnu ingen deltagere oprettet."
-        />
-      </Card>
-
-      <Card title="Seneste resultater" eyebrow="Afleverede prøver" className="space-y-4">
-        <AdminTable
-          caption="Seneste resultater"
-          columns={resultColumns}
-          rows={resultRows}
-          emptyMessage="Ingen afleverede prøver endnu."
-        />
-      </Card>
-
-      <div className="flex justify-end">
+      <div className="flex justify-between gap-3">
+        <Button href="/admin/status" variant="secondary" size="lg">
+          Åbn status
+        </Button>
         <form action={logoutAdminAction}>
           <Button type="submit" variant="secondary" size="sm">
             Log ud
