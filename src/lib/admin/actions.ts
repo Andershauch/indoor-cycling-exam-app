@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AdminRole, InvitationChannel } from "@prisma/client";
 
+import { createAdminAuditLog, getAdminRequestContext } from "@/lib/admin/audit";
 import {
   clearAdminSession,
   isAdminLoginConfigured,
@@ -21,6 +22,28 @@ import { createAndDispatchInvitation } from "@/lib/invitations/service";
 
 const ADMINS_ROUTE = "/admins" as Parameters<typeof redirect>[0];
 
+async function logAdminAction(input: {
+  adminUserId?: string | null;
+  action: string;
+  targetType?: string | null;
+  targetId?: string | null;
+  targetLabel?: string | null;
+  metadata?: Record<string, string | number | boolean | null>;
+}) {
+  const requestContext = await getAdminRequestContext();
+
+  await createAdminAuditLog({
+    adminUserId: input.adminUserId ?? null,
+    action: input.action,
+    targetType: input.targetType ?? null,
+    targetId: input.targetId ?? null,
+    targetLabel: input.targetLabel ?? null,
+    metadata: input.metadata ?? null,
+    ipAddress: requestContext.ipAddress,
+    userAgent: requestContext.userAgent,
+  });
+}
+
 export async function loginAdminAction(formData: FormData) {
   if (!isAdminLoginConfigured()) {
     redirect("/admin/login?error=config");
@@ -32,17 +55,34 @@ export async function loginAdminAction(formData: FormData) {
     redirect("/admin/login?error=email");
   }
 
-  await issueAdminMagicLink(email);
+  try {
+    await issueAdminMagicLink(email);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("For mange admin-loginforsog")) {
+      redirect("/admin/login?error=rate-limit");
+    }
+
+    throw error;
+  }
+
   redirect("/admin/login?sent=1");
 }
 
 export async function logoutAdminAction() {
+  const session = await requireAdminSession();
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "ADMIN_LOGOUT",
+    targetType: "admin_user",
+    targetId: session.id,
+    targetLabel: session.email,
+  });
   await clearAdminSession();
   redirect("/admin/login");
 }
 
 export async function createAdminUserAction(formData: FormData) {
-  await requireAdminSession(AdminRole.SUPER_ADMIN);
+  const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const name = String(formData.get("name") ?? "").trim();
@@ -83,6 +123,29 @@ export async function createAdminUserAction(formData: FormData) {
       name: name || email.split("@")[0] || "Admin",
       role: roleValue,
       isActive: true,
+    },
+  });
+
+  const targetUser = await prisma.adminUser.findUnique({
+    where: {
+      email,
+    },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+    },
+  });
+
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "ADMIN_USER_UPSERTED",
+    targetType: "admin_user",
+    targetId: targetUser?.id ?? null,
+    targetLabel: email,
+    metadata: {
+      role: targetUser?.role ?? roleValue,
+      bootstrapProtected: email === bootstrapSuperAdminEmail,
     },
   });
 
@@ -135,6 +198,17 @@ export async function updateAdminUserRoleAction(formData: FormData) {
       id: adminUserId,
     },
     data: {
+      role: roleValue,
+    },
+  });
+
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "ADMIN_USER_ROLE_UPDATED",
+    targetType: "admin_user",
+    targetId: target.id,
+    targetLabel: target.email,
+    metadata: {
       role: roleValue,
     },
   });
@@ -193,6 +267,14 @@ export async function toggleAdminUserActiveAction(formData: FormData) {
     },
   });
 
+  await logAdminAction({
+    adminUserId: session.id,
+    action: nextActive ? "ADMIN_USER_ACTIVATED" : "ADMIN_USER_DEACTIVATED",
+    targetType: "admin_user",
+    targetId: target.id,
+    targetLabel: target.email,
+  });
+
   revalidatePath(ADMINS_ROUTE);
 
   if (session.id === adminUserId && !nextActive) {
@@ -204,7 +286,7 @@ export async function toggleAdminUserActiveAction(formData: FormData) {
 }
 
 export async function createQuestionAction(formData: FormData) {
-  await requireAdminSession(AdminRole.SUPER_ADMIN);
+  const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   const examSet = await ensureEditableExamSet();
@@ -245,12 +327,20 @@ export async function createQuestionAction(formData: FormData) {
     });
   });
 
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "QUESTION_CREATED",
+    targetType: "exam_set",
+    targetId: examSet.id,
+    targetLabel: payload.externalKey,
+  });
+
   revalidatePath("/admin");
   redirect("/admin");
 }
 
 export async function updateQuestionAction(formData: FormData) {
-  await requireAdminSession(AdminRole.SUPER_ADMIN);
+  const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   await ensureEditableExamSet();
@@ -334,12 +424,20 @@ export async function updateQuestionAction(formData: FormData) {
     }
   });
 
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "QUESTION_UPDATED",
+    targetType: "question",
+    targetId: questionId,
+    targetLabel: payload.externalKey,
+  });
+
   revalidatePath("/admin");
   redirect("/admin");
 }
 
 export async function deleteQuestionAction(formData: FormData) {
-  await requireAdminSession(AdminRole.SUPER_ADMIN);
+  const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   const examSet = await ensureEditableExamSet();
@@ -353,9 +451,12 @@ export async function deleteQuestionAction(formData: FormData) {
     where: {
       id: examQuestionId,
     },
-    include: {
+    select: {
+      id: true,
       question: {
-        include: {
+        select: {
+          id: true,
+          externalKey: true,
           examEntries: true,
         },
       },
@@ -389,12 +490,19 @@ export async function deleteQuestionAction(formData: FormData) {
   });
 
   await resequenceExamQuestions(examSet.id);
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "QUESTION_DELETED",
+    targetType: "question",
+    targetId: examQuestion.question.id,
+    targetLabel: examQuestion.question.externalKey,
+  });
   revalidatePath("/admin");
   redirect("/admin");
 }
 
 export async function moveQuestionAction(formData: FormData) {
-  await requireAdminSession(AdminRole.SUPER_ADMIN);
+  const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   const examSet = await ensureEditableExamSet();
@@ -450,6 +558,18 @@ export async function moveQuestionAction(formData: FormData) {
     }),
   ]);
 
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "QUESTION_REORDERED",
+    targetType: "question",
+    targetId: current.id,
+    metadata: {
+      direction,
+      fromPosition: current.position,
+      toPosition: target.position,
+    },
+  });
+
   revalidatePath("/admin");
   redirect("/admin");
 }
@@ -492,6 +612,17 @@ export async function createInvitationAction(formData: FormData) {
     recipientName: String(formData.get("recipientName") ?? "").trim() || null,
     recipientEmail: String(formData.get("recipientEmail") ?? "").trim() || null,
     recipientPhone: String(formData.get("recipientPhone") ?? "").trim() || null,
+  });
+
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "INVITATION_CREATED",
+    targetType: "exam_set",
+    targetId: examSet.id,
+    targetLabel: String(formData.get("recipientEmail") ?? "").trim() || String(formData.get("recipientPhone") ?? "").trim() || "invitation",
+    metadata: {
+      channel: channelValue,
+    },
   });
 
   revalidatePath("/invitations");
@@ -556,6 +687,19 @@ export async function createBatchInvitationsAction(formData: FormData) {
         failedCount += 1;
       }
     }
+
+    await logAdminAction({
+      adminUserId: session.id,
+      action: "INVITATION_BATCH_PROCESSED",
+      targetType: "exam_set",
+      targetId: examSet.id,
+      targetLabel: upload.name,
+      metadata: {
+        createdCount,
+        failedCount,
+        ignoredCount: parsed.ignoredRowCount,
+      },
+    });
 
     revalidatePath("/admin");
     revalidatePath("/invitations");

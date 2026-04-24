@@ -143,9 +143,10 @@ export async function getActiveExamAdminSnapshot() {
 }
 
 export async function getAdminDashboardSnapshot() {
-  const [examSnapshot, reportSnapshot] = await Promise.all([
+  const [examSnapshot, reportSnapshot, auditLogSnapshot] = await Promise.all([
     getActiveExamAdminSnapshot(),
     getAdminReportsSnapshot(),
+    getAdminAuditSnapshot(),
   ]);
 
   if (!examSnapshot || !reportSnapshot) {
@@ -186,7 +187,37 @@ export async function getAdminDashboardSnapshot() {
       expired: invitationCounts.EXPIRED ?? 0,
     },
     hardestQuestions: reportSnapshot.hardestQuestions.slice(0, 3),
+    recentAdminActivity: auditLogSnapshot,
   };
+}
+
+export async function getAdminAuditSnapshot() {
+  const auditLogs = await getPrismaClient().adminAuditLog.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: 12,
+    include: {
+      adminUser: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  return auditLogs.map((log: (typeof auditLogs)[number]) => ({
+    id: log.id,
+    action: log.action,
+    targetType: log.targetType,
+    targetId: log.targetId,
+    targetLabel: log.targetLabel,
+    ipAddress: log.ipAddress,
+    createdAt: log.createdAt,
+    adminUser: log.adminUser,
+  }));
 }
 
 export async function getAdminUsersSnapshot() {

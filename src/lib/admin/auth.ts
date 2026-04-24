@@ -4,6 +4,11 @@ import { AdminRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { createAdminAuditLog, getAdminRequestContext } from "@/lib/admin/audit";
+import {
+  assertAdminMagicLinkRateLimit,
+  recordAdminMagicLinkRequest,
+} from "@/lib/admin/rate-limit";
 import { getAppEnv } from "@/lib/config/app-env";
 import { getPrismaClient } from "@/lib/db/prisma";
 
@@ -239,9 +244,47 @@ export async function issueAdminMagicLink(email: string) {
     throw new Error("Admin-login er ikke konfigureret endnu.");
   }
 
-  const adminUser = await findLoginEligibleAdmin(email);
+  const normalisedEmail = normaliseEmail(email);
+  const requestContext = await getAdminRequestContext();
+
+  try {
+    await assertAdminMagicLinkRateLimit({
+      email: normalisedEmail,
+      ipAddress: requestContext.ipAddress,
+    });
+  } catch (error) {
+    await recordAdminMagicLinkRequest({
+      email: normalisedEmail,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      outcome: "RATE_LIMITED",
+    });
+    await createAdminAuditLog({
+      action: "ADMIN_MAGIC_LINK_RATE_LIMITED",
+      targetType: "admin_login",
+      targetLabel: normalisedEmail,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+    });
+    throw error;
+  }
+
+  const adminUser = await findLoginEligibleAdmin(normalisedEmail);
 
   if (!adminUser || !adminUser.isActive) {
+    await recordAdminMagicLinkRequest({
+      email: normalisedEmail,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      outcome: "REJECTED",
+    });
+    await createAdminAuditLog({
+      action: "ADMIN_MAGIC_LINK_REJECTED",
+      targetType: "admin_login",
+      targetLabel: normalisedEmail,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+    });
     return { delivered: false as const };
   }
 
@@ -254,6 +297,24 @@ export async function issueAdminMagicLink(email: string) {
     now.getTime() - adminUser.lastMagicLinkSentAt.getTime() <
       config.throttleSeconds * 1000
   ) {
+    await recordAdminMagicLinkRequest({
+      email: normalisedEmail,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      outcome: "THROTTLED",
+    });
+    await createAdminAuditLog({
+      adminUserId: adminUser.id,
+      action: "ADMIN_MAGIC_LINK_THROTTLED",
+      targetType: "admin_user",
+      targetId: adminUser.id,
+      targetLabel: adminUser.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      metadata: {
+        throttleSeconds: config.throttleSeconds,
+      },
+    });
     return { delivered: true as const };
   }
 
@@ -281,10 +342,48 @@ export async function issueAdminMagicLink(email: string) {
   });
 
   const magicLink = `${getAppEnv().appUrl}/admin/login/verify?token=${encodeURIComponent(rawToken)}`;
-  await sendAdminMagicLinkEmail({
-    email: adminUser.email,
-    name: adminUser.name,
-    magicLink,
+  try {
+    await sendAdminMagicLinkEmail({
+      email: adminUser.email,
+      name: adminUser.name,
+      magicLink,
+    });
+  } catch (error) {
+    await recordAdminMagicLinkRequest({
+      email: normalisedEmail,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      outcome: "FAILED",
+    });
+    await createAdminAuditLog({
+      adminUserId: adminUser.id,
+      action: "ADMIN_MAGIC_LINK_SEND_FAILED",
+      targetType: "admin_user",
+      targetId: adminUser.id,
+      targetLabel: adminUser.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+      metadata: {
+        message: error instanceof Error ? error.message : "Ukendt fejl",
+      },
+    });
+    throw error;
+  }
+
+  await recordAdminMagicLinkRequest({
+    email: normalisedEmail,
+    ipAddress: requestContext.ipAddress,
+    userAgent: requestContext.userAgent,
+    outcome: "SENT",
+  });
+  await createAdminAuditLog({
+    adminUserId: adminUser.id,
+    action: "ADMIN_MAGIC_LINK_SENT",
+    targetType: "admin_user",
+    targetId: adminUser.id,
+    targetLabel: adminUser.email,
+    ipAddress: requestContext.ipAddress,
+    userAgent: requestContext.userAgent,
   });
 
   return { delivered: true as const };
@@ -318,6 +417,7 @@ export async function consumeAdminMagicLink(rawToken: string) {
   const tokenHash = hashMagicLinkToken(rawToken);
   const prisma = getPrismaClient();
   const now = new Date();
+  const requestContext = await getAdminRequestContext();
 
   const record = await prisma.adminMagicLinkToken.findUnique({
     where: {
@@ -329,6 +429,13 @@ export async function consumeAdminMagicLink(rawToken: string) {
   });
 
   if (!record || record.usedAt || record.expiresAt.getTime() <= now.getTime()) {
+    await createAdminAuditLog({
+      action: "ADMIN_MAGIC_LINK_CONSUME_FAILED",
+      targetType: "admin_magic_link",
+      targetLabel: "invalid-or-expired",
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+    });
     return null;
   }
 
@@ -338,6 +445,14 @@ export async function consumeAdminMagicLink(rawToken: string) {
       : record.adminUser;
 
   if (!adminUser || !adminUser.isActive) {
+    await createAdminAuditLog({
+      action: "ADMIN_MAGIC_LINK_CONSUME_REJECTED",
+      targetType: "admin_user",
+      targetId: record.adminUser.id,
+      targetLabel: record.adminUser.email,
+      ipAddress: requestContext.ipAddress,
+      userAgent: requestContext.userAgent,
+    });
     return null;
   }
 
@@ -351,6 +466,15 @@ export async function consumeAdminMagicLink(rawToken: string) {
   });
 
   await createAdminSession(adminUser);
+  await createAdminAuditLog({
+    adminUserId: adminUser.id,
+    action: "ADMIN_MAGIC_LINK_CONSUMED",
+    targetType: "admin_user",
+    targetId: adminUser.id,
+    targetLabel: adminUser.email,
+    ipAddress: requestContext.ipAddress,
+    userAgent: requestContext.userAgent,
+  });
   return adminUser;
 }
 

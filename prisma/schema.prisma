@@ -45,6 +45,7 @@ model AdminUser {
   createdExams   ExamSet[]
   createdInvites Invitation[]
   magicLinkTokens AdminMagicLinkToken[]
+  auditLogs      AdminAuditLog[]
 }
 
 model AdminMagicLinkToken {
@@ -57,6 +58,37 @@ model AdminMagicLinkToken {
   adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 
   @@index([adminUserId, expiresAt])
+}
+
+model AdminAuditLog {
+  id          String     @id @default(cuid())
+  adminUserId String?
+  action      String
+  targetType  String?
+  targetId    String?
+  targetLabel String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime   @default(now())
+  adminUser   AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([adminUserId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}
+
+model AdminMagicLinkRequest {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String?
+  userAgent String?
+  outcome   String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@index([outcome, createdAt])
 }
 
 model ExamSet {

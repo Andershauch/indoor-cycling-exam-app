@@ -23,9 +23,16 @@ const resultColumns = [
   { key: "actions", label: "Vis", align: "right" as const },
 ];
 
+const auditColumns = [
+  { key: "when", label: "Tid" },
+  { key: "actor", label: "Admin" },
+  { key: "action", label: "Handling" },
+  { key: "target", label: "Mal" },
+];
+
 function formatDate(value: Date | null) {
   if (!value) {
-    return "—";
+    return "-";
   }
 
   return new Intl.DateTimeFormat("da-DK", {
@@ -43,7 +50,7 @@ function formatParticipantStatus(input: {
   }
 
   if (input.latestAttemptStatus === "SUBMITTED" || input.latestAttemptStatus === "AUTO_SUBMITTED") {
-    return "Gennemført";
+    return "Gennemfort";
   }
 
   switch (input.invitationStatus) {
@@ -52,13 +59,48 @@ function formatParticipantStatus(input: {
     case "SENT":
       return "Sendt";
     case "OPENED":
-      return "Åbnet";
+      return "Abnet";
     case "COMPLETED":
-      return "Gennemført";
+      return "Gennemfort";
     case "EXPIRED":
-      return "Udløbet";
+      return "Udlobet";
     default:
       return input.invitationStatus;
+  }
+}
+
+function formatAuditAction(action: string) {
+  switch (action) {
+    case "ADMIN_MAGIC_LINK_SENT":
+      return "Magic link sendt";
+    case "ADMIN_MAGIC_LINK_CONSUMED":
+      return "Magic link brugt";
+    case "ADMIN_MAGIC_LINK_RATE_LIMITED":
+      return "Login bremset";
+    case "ADMIN_USER_UPSERTED":
+      return "Admin gemt";
+    case "ADMIN_USER_ROLE_UPDATED":
+      return "Rolle opdateret";
+    case "ADMIN_USER_ACTIVATED":
+      return "Admin aktiveret";
+    case "ADMIN_USER_DEACTIVATED":
+      return "Admin deaktiveret";
+    case "INVITATION_CREATED":
+      return "Invitation sendt";
+    case "INVITATION_BATCH_PROCESSED":
+      return "Excel-import kort";
+    case "QUESTION_CREATED":
+      return "Sporgsmal oprettet";
+    case "QUESTION_UPDATED":
+      return "Sporgsmal opdateret";
+    case "QUESTION_DELETED":
+      return "Sporgsmal slettet";
+    case "QUESTION_REORDERED":
+      return "Sporgsmal flyttet";
+    case "ADMIN_LOGOUT":
+      return "Logget ud";
+    default:
+      return action;
   }
 }
 
@@ -75,8 +117,8 @@ export default async function AdminStatusPage() {
       <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Status"
-          title="INGEN AKTIV PRØVE"
-          description="Importér eller opret først en aktiv prøve, før status og resultater kan vises."
+          title="INGEN AKTIV PROVE"
+          description="Importer eller opret forst en aktiv prove, for status og resultater kan vises."
         />
       </div>
     );
@@ -89,7 +131,7 @@ export default async function AdminStatusPage() {
     });
 
     const scoreLabel =
-      invitation.latestAttemptScore === null ? "—" : `${Math.round(invitation.latestAttemptScore)}%`;
+      invitation.latestAttemptScore === null ? "-" : `${Math.round(invitation.latestAttemptScore)}%`;
 
     return {
       participant: (
@@ -124,7 +166,7 @@ export default async function AdminStatusPage() {
         </p>
       </div>
     ),
-    score: attempt.scorePercentage === null ? "—" : `${Math.round(attempt.scorePercentage)}%`,
+    score: attempt.scorePercentage === null ? "-" : `${Math.round(attempt.scorePercentage)}%`,
     submitted: formatDate(attempt.submittedAt),
     actions: (
       <Button href="/reports" variant="secondary" size="sm">
@@ -133,11 +175,31 @@ export default async function AdminStatusPage() {
     ),
   }));
 
+  const auditRows = dashboard.recentAdminActivity.map(
+    (event: (typeof dashboard.recentAdminActivity)[number]) => ({
+    when: formatDate(event.createdAt),
+    actor: (
+      <div className="space-y-1">
+        <p className="font-bold">{event.adminUser?.name || "System"}</p>
+        <p className="text-xs text-muted-foreground">
+          {event.adminUser?.email || event.ipAddress || "Ukendt"}
+        </p>
+      </div>
+    ),
+    action: formatAuditAction(event.action),
+    target: (
+      <div className="space-y-1">
+        <p className="font-bold">{event.targetLabel || event.targetType || "-"}</p>
+        <p className="text-xs text-muted-foreground">{event.ipAddress || "Ingen IP"}</p>
+      </div>
+    ),
+  }));
+
   return (
     <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
       <PageHeader
         eyebrow="Trin 2"
-        title="FØLG PRØVEN LIGE NU"
+        title="FOLG PROVEN LIGE NU"
         description="Her ser du, hvem der er sendt til, hvem der er i gang, og hvilke resultater der er kommet ind."
         actions={
           <div className="flex flex-wrap gap-3">
@@ -147,7 +209,7 @@ export default async function AdminStatusPage() {
             {adminSession?.role === "SUPER_ADMIN" ? (
               <>
                 <Button href="/questions" variant="secondary" size="lg">
-                  Spørgsmål
+                  Sporgsmal
                 </Button>
                 <Button href="/admins" variant="secondary" size="lg">
                   Admins
@@ -171,18 +233,18 @@ export default async function AdminStatusPage() {
           <p className="font-display text-4xl">{dashboard.invitationStats.sent}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Åbnet</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Abnet</p>
           <p className="font-display text-4xl">{dashboard.invitationStats.opened}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Gennemført</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Gennemfort</p>
           <p className="font-display text-4xl">{dashboard.invitationStats.completed}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Bestået %</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Bestaet %</p>
           <p className="font-display text-4xl">
             {dashboard.reportStats.passRate === null
-              ? "—"
+              ? "-"
               : `${Math.round(dashboard.reportStats.passRate)}%`}
           </p>
         </Card>
@@ -197,12 +259,21 @@ export default async function AdminStatusPage() {
         />
       </Card>
 
-      <Card title="Seneste resultater" eyebrow="Afleverede prøver" className="space-y-4">
+      <Card title="Seneste resultater" eyebrow="Afleverede prover" className="space-y-4">
         <AdminTable
           caption="Seneste resultater"
           columns={resultColumns}
           rows={resultRows}
-          emptyMessage="Ingen afleverede prøver endnu."
+          emptyMessage="Ingen afleverede prover endnu."
+        />
+      </Card>
+
+      <Card title="Seneste admin-aktivitet" eyebrow="Audit-log" className="space-y-4">
+        <AdminTable
+          caption="Seneste admin-aktivitet"
+          columns={auditColumns}
+          rows={auditRows}
+          emptyMessage="Ingen admin-haendelser endnu."
         />
       </Card>
 
