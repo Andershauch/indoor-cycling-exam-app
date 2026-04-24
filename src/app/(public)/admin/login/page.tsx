@@ -16,19 +16,20 @@ type AdminLoginPageProps = {
 };
 
 function getErrorMessage(error?: string) {
-  if (error === "config") {
-    return "Admin-login er ikke konfigureret endnu. Tilføj superadmin-mail først.";
+  switch (error) {
+    case "config":
+      return "Admin-login er ikke konfigureret endnu. Tilfoej superadmin og de noedvendige secrets foerst.";
+    case "email":
+      return "Skriv en gyldig admin-e-mail for at faa et magic link.";
+    case "expired":
+      return "Magic linket er udloebet eller allerede brugt. Bestil et nyt link.";
+    case "rate-limit":
+      return "For mange loginforsoeg lige nu. Vent lidt og proev igen.";
+    case "send-failed":
+      return "Magic linket kunne ikke sendes. Kontroller mailopsaetningen og proev igen.";
+    default:
+      return null;
   }
-
-  if (error === "email") {
-    return "Skriv en gyldig admin-e-mail for at få et magic link.";
-  }
-
-  if (error === "expired") {
-    return "Magic linket er udløbet eller allerede brugt. Bestil et nyt link.";
-  }
-
-  return null;
 }
 
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
@@ -45,7 +46,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
       <Card tone="strong" className="space-y-6 p-6 sm:p-8">
         <div className="space-y-3">
           <p className="kicker">Admin-login</p>
-          <h1 className="section-title">FÅ ET MAGIC LINK</h1>
+          <h1 className="section-title">FAA ET MAGIC LINK</h1>
           <p className="max-w-xl text-base leading-7 text-foreground">
             Skriv din admin-e-mail. Hvis adressen er godkendt, sender systemet et engangslink,
             som logger dig direkte ind.
@@ -69,13 +70,14 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
 
         {params.sent ? (
           <p className="text-sm leading-6 text-foreground">
-            Hvis e-mailadressen er godkendt, er linket sendt.
+            Hvis e-mailadressen er godkendt, er linket sendt. Tjek din indbakke og spam-mappe.
           </p>
         ) : null}
 
         {!isConfigured ? (
           <p className="text-sm leading-6 text-danger">
-            Admin-login er ikke konfigureret endnu. Tilføj superadmin og admin-allowlist først.
+            Admin-login er ikke konfigureret endnu. Tilfoej superadmin, mailopsaetning og
+            sessions-secrets foerst.
           </p>
         ) : null}
       </Card>

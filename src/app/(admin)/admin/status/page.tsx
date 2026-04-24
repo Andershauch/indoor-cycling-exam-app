@@ -27,12 +27,12 @@ const auditColumns = [
   { key: "when", label: "Tid" },
   { key: "actor", label: "Admin" },
   { key: "action", label: "Handling" },
-  { key: "target", label: "Mal" },
+  { key: "target", label: "Maal" },
 ];
 
 function formatDate(value: Date | null) {
   if (!value) {
-    return "-";
+    return "Ikke endnu";
   }
 
   return new Intl.DateTimeFormat("da-DK", {
@@ -50,20 +50,20 @@ function formatParticipantStatus(input: {
   }
 
   if (input.latestAttemptStatus === "SUBMITTED" || input.latestAttemptStatus === "AUTO_SUBMITTED") {
-    return "Gennemfort";
+    return "Gennemfoert";
   }
 
   switch (input.invitationStatus) {
     case "CREATED":
-      return "Oprettet";
+      return "Klar";
     case "SENT":
       return "Sendt";
     case "OPENED":
-      return "Abnet";
+      return "Aabnet";
     case "COMPLETED":
-      return "Gennemfort";
+      return "Gennemfoert";
     case "EXPIRED":
-      return "Udlobet";
+      return "Udloebet";
     default:
       return input.invitationStatus;
   }
@@ -88,15 +88,15 @@ function formatAuditAction(action: string) {
     case "INVITATION_CREATED":
       return "Invitation sendt";
     case "INVITATION_BATCH_PROCESSED":
-      return "Excel-import kort";
+      return "Excel-import koert";
     case "QUESTION_CREATED":
-      return "Sporgsmal oprettet";
+      return "Spoergsmaal oprettet";
     case "QUESTION_UPDATED":
-      return "Sporgsmal opdateret";
+      return "Spoergsmaal opdateret";
     case "QUESTION_DELETED":
-      return "Sporgsmal slettet";
+      return "Spoergsmaal slettet";
     case "QUESTION_REORDERED":
-      return "Sporgsmal flyttet";
+      return "Spoergsmaal flyttet";
     case "ADMIN_LOGOUT":
       return "Logget ud";
     default:
@@ -117,8 +117,8 @@ export default async function AdminStatusPage() {
       <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Status"
-          title="INGEN AKTIV PROVE"
-          description="Importer eller opret forst en aktiv prove, for status og resultater kan vises."
+          title="INGEN AKTIV PROEVE"
+          description="Importer eller opret foerst en aktiv proeve, foer status og resultater kan vises."
         />
       </div>
     );
@@ -177,29 +177,30 @@ export default async function AdminStatusPage() {
 
   const auditRows = dashboard.recentAdminActivity.map(
     (event: (typeof dashboard.recentAdminActivity)[number]) => ({
-    when: formatDate(event.createdAt),
-    actor: (
-      <div className="space-y-1">
-        <p className="font-bold">{event.adminUser?.name || "System"}</p>
-        <p className="text-xs text-muted-foreground">
-          {event.adminUser?.email || event.ipAddress || "Ukendt"}
-        </p>
-      </div>
-    ),
-    action: formatAuditAction(event.action),
-    target: (
-      <div className="space-y-1">
-        <p className="font-bold">{event.targetLabel || event.targetType || "-"}</p>
-        <p className="text-xs text-muted-foreground">{event.ipAddress || "Ingen IP"}</p>
-      </div>
-    ),
-  }));
+      when: formatDate(event.createdAt),
+      actor: (
+        <div className="space-y-1">
+          <p className="font-bold">{event.adminUser?.name || "System"}</p>
+          <p className="text-xs text-muted-foreground">
+            {event.adminUser?.email || event.ipAddress || "Ukendt"}
+          </p>
+        </div>
+      ),
+      action: formatAuditAction(event.action),
+      target: (
+        <div className="space-y-1">
+          <p className="font-bold">{event.targetLabel || event.targetType || "-"}</p>
+          <p className="text-xs text-muted-foreground">{event.ipAddress || "Ingen IP"}</p>
+        </div>
+      ),
+    }),
+  );
 
   return (
     <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
       <PageHeader
         eyebrow="Trin 2"
-        title="FOLG PROVEN LIGE NU"
+        title="FOELG PROEVEN LIGE NU"
         description="Her ser du, hvem der er sendt til, hvem der er i gang, og hvilke resultater der er kommet ind."
         actions={
           <div className="flex flex-wrap gap-3">
@@ -209,7 +210,7 @@ export default async function AdminStatusPage() {
             {adminSession?.role === "SUPER_ADMIN" ? (
               <>
                 <Button href="/questions" variant="secondary" size="lg">
-                  Sporgsmal
+                  Spoergsmaal
                 </Button>
                 <Button href="/admins" variant="secondary" size="lg">
                   Admins
@@ -233,15 +234,15 @@ export default async function AdminStatusPage() {
           <p className="font-display text-4xl">{dashboard.invitationStats.sent}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Abnet</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Aabnet</p>
           <p className="font-display text-4xl">{dashboard.invitationStats.opened}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Gennemfort</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Gennemfoert</p>
           <p className="font-display text-4xl">{dashboard.invitationStats.completed}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Bestaet %</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Bestaaet %</p>
           <p className="font-display text-4xl">
             {dashboard.reportStats.passRate === null
               ? "-"
@@ -259,12 +260,12 @@ export default async function AdminStatusPage() {
         />
       </Card>
 
-      <Card title="Seneste resultater" eyebrow="Afleverede prover" className="space-y-4">
+      <Card title="Seneste resultater" eyebrow="Afleverede proever" className="space-y-4">
         <AdminTable
           caption="Seneste resultater"
           columns={resultColumns}
           rows={resultRows}
-          emptyMessage="Ingen afleverede prover endnu."
+          emptyMessage="Ingen afleverede proever endnu."
         />
       </Card>
 

@@ -34,82 +34,182 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Upload"
-          title="INGEN AKTIV PRØVE"
-          description="Importér eller opret først en aktiv prøve, før deltagere kan uploades her."
+          title="INGEN AKTIV PROEVE"
+          description="Goer en proeve aktiv foerst. Derefter kan du uploade deltagerlisten og sende invitationslinks."
         />
       </div>
     );
   }
 
+  const activeInvitations = dashboard.invitationStats.created + dashboard.invitationStats.sent;
+  const recentActivity = dashboard.recentAdminActivity.slice(0, 4);
+
   return (
     <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
       <PageHeader
-        eyebrow="Trin 1"
-        title="UPLOAD DELTAGERLISTE"
-        description="Upload Excel-filen og send prøvelinks ud. Når uploaden er gennemført, fortsætter du til statussiden."
+        eyebrow="Instruktoer-flow"
+        title="KLARGOER OG AFVIKL PROEVEN"
+        description="Denne side er lavet til hurtig afvikling: upload deltagerlisten, send links, foelg status under proeven og hent rapporter bagefter."
         actions={
           <div className="flex flex-wrap gap-3">
+            <Button href="/admin/status" variant="secondary" size="lg">
+              Aabn status
+            </Button>
+            <Button href="/invitations" variant="secondary" size="lg">
+              Se invitationer
+            </Button>
+            <Button href="/reports" variant="secondary" size="lg">
+              Se rapporter
+            </Button>
             {adminSession?.role === "SUPER_ADMIN" ? (
               <>
                 <Button href="/questions" variant="secondary" size="lg">
-                  Spørgsmål
+                  Sporgsmaal
                 </Button>
                 <Button href="/admins" variant="secondary" size="lg">
                   Admins
                 </Button>
               </>
             ) : null}
-            <Button href="/reports" variant="secondary" size="lg">
-              Se rapporter
-            </Button>
           </div>
         }
       />
 
       {params.batchOk ? (
-        <Card tone="strong" title="Batch-upload gennemført" eyebrow="Importstatus">
+        <Card tone="strong" title="Excel-import gennemfoert" eyebrow="Importstatus">
           <p className="text-base leading-7 text-foreground">
             Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:{" "}
             {params.ignored ?? "0"}
           </p>
-          <div className="pt-2">
+          <p className="text-sm leading-7 text-muted-foreground">
+            Naeste skridt er at aabne status og kontrollere, at invitationerne er sendt, og at de
+            foerste deltagere kan komme ind uden fejl.
+          </p>
+          <div className="flex flex-wrap gap-3 pt-2">
             <Button href="/admin/status" size="lg">
-              Gå til status
+              Gaa til status
+            </Button>
+            <Button href="/invitations" variant="secondary" size="lg">
+              Se invitationer
             </Button>
           </div>
         </Card>
       ) : null}
 
       {params.batchError ? (
-        <Card title="Batch-upload kunne ikke gennemføres" eyebrow="Fejl">
+        <Card title="Excel-import kunne ikke gennemfoeres" eyebrow="Fejl">
           <p className="text-base leading-7 text-danger">{params.batchError}</p>
+          <p className="text-sm leading-7 text-muted-foreground">
+            Kontroller filformatet og proev igen. Hvis kun en enkelt deltager mangler, kan du bruge
+            formularen nederst til manuel oprettelse.
+          </p>
         </Card>
       ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Aktiv prøve</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Aktiv proeve</p>
           <p className="font-display text-4xl">1</p>
+          <p className="text-sm text-muted-foreground">{dashboard.exam.title}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Beståelseskrav</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Inviterede</p>
+          <p className="font-display text-4xl">{dashboard.invitationStats.total}</p>
+          <p className="text-sm text-muted-foreground">
+            {activeInvitations} afventer stadig at blive aabnet eller afsluttet
+          </p>
+        </Card>
+        <Card className="space-y-2">
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Bestaaelseskrav</p>
           <p className="font-display text-4xl">{dashboard.exam.passPercentage}%</p>
         </Card>
         <Card className="space-y-2">
           <p className="text-sm font-bold uppercase tracking-[0.08em]">Tidsramme</p>
-          <p className="font-display text-4xl">30 min</p>
+          <p className="font-display text-4xl">{dashboard.exam.timeLimitMinutes} min</p>
         </Card>
-        <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Kanal</p>
-          <p className="font-display text-4xl">Mail</p>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+        <Card title="Saadan afvikler du proeven" eyebrow="Kort tjekliste" className="space-y-4">
+          <ol className="grid gap-4 text-sm leading-7 text-foreground">
+            <li>
+              <strong>1. Kontroller den aktive proeve.</strong> Bekraeft at titlen og tidsrammen
+              ovenfor er korrekte, foer du sender noget ud.
+            </li>
+            <li>
+              <strong>2. Upload Excel-filen.</strong> Systemet opretter invitationer og sender
+              links automatisk til deltagerne.
+            </li>
+            <li>
+              <strong>3. Aabn status under afviklingen.</strong> Her ser du hurtigt, hvem der har
+              aabnet linket, og hvem der er faerdige.
+            </li>
+            <li>
+              <strong>4. Brug manuel oprettelse kun som fallback.</strong> Den er bedst til en
+              enkelt deltager, der mangler efter import.
+            </li>
+            <li>
+              <strong>5. Hent rapporter bagefter.</strong> Brug rapportsiden til resultater og
+              eksport.
+            </li>
+          </ol>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Button href="/admin/status" variant="secondary">
+              Status under proeven
+            </Button>
+            <Button href="/invitations" variant="secondary">
+              Invitationsoverblik
+            </Button>
+            <Button href="/reports" variant="secondary">
+              Resultater
+            </Button>
+          </div>
+        </Card>
+
+        <Card title="Hurtigt overblik" eyebrow="Naeste handling" className="space-y-4">
+          <div className="grid gap-3">
+            <div className="rounded-[var(--radius-sm)] border border-border bg-surface px-4 py-3">
+              <p className="text-sm font-bold uppercase tracking-[0.08em]">Aktiv proeve</p>
+              <p className="mt-1 text-base text-foreground">{dashboard.exam.title}</p>
+              <p className="text-sm text-muted-foreground">
+                {dashboard.exam.questionCount} spoergsmaal · {dashboard.exam.timeLimitMinutes} min
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-sm)] border border-border bg-surface px-4 py-3">
+              <p className="text-sm font-bold uppercase tracking-[0.08em]">Invitationer nu</p>
+              <p className="mt-1 text-base text-foreground">
+                {dashboard.invitationStats.sent} sendt · {dashboard.invitationStats.opened} aabnet
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {dashboard.invitationStats.completed} faerdige · {dashboard.invitationStats.expired} udloebne
+              </p>
+            </div>
+            <div className="rounded-[var(--radius-sm)] border border-border bg-surface px-4 py-3">
+              <p className="text-sm font-bold uppercase tracking-[0.08em]">Seneste aktivitet</p>
+              {recentActivity.length > 0 ? (
+                <ul className="mt-2 grid gap-2 text-sm text-muted-foreground">
+                  {recentActivity.map((entry) => (
+                    <li key={entry.id}>
+                      {entry.targetLabel ?? entry.action} ·{" "}
+                      {entry.createdAt.toLocaleString("da-DK")}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Ingen admin-aktivitet endnu i denne periode.
+                </p>
+              )}
+            </div>
+          </div>
         </Card>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <Card title="Upload deltagerliste" eyebrow="Batch fra Excel" className="space-y-4">
           <p className="text-sm leading-7 text-muted-foreground">
-            Upload Excel-filen med deltagerne. Systemet læser kun kolonnerne
-            <strong> Fulde navn</strong> og <strong>E-mailadresse</strong> og ignorerer resten.
+            Upload Excel-filen med deltagerne. Systemet laeser kun kolonnerne
+            <strong> Fulde navn</strong> og <strong> E-mailadresse</strong> og ignorerer resten.
           </p>
           <form action={createBatchInvitationsAction} className="grid gap-4">
             <label className="grid gap-2">
@@ -125,11 +225,15 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               Upload og send links
             </Button>
           </form>
+          <p className="text-xs leading-6 text-muted-foreground">
+            Brug helst en lille testfil foerst, hvis du er i tvivl om kolonnenavnene.
+          </p>
         </Card>
 
-        <Card title="Tilføj én deltager" eyebrow="Manuel fallback" className="space-y-4">
+        <Card title="Tilfoej en deltager" eyebrow="Manuel fallback" className="space-y-4">
           <p className="text-sm leading-7 text-muted-foreground">
-            Brug kun denne, hvis en enkelt deltager mangler efter batch-upload.
+            Brug kun denne, hvis en enkelt deltager mangler efter batch-upload, eller hvis du skal
+            loese et enkelt problem hurtigt under afviklingen.
           </p>
           <form action={createInvitationAction} className="grid gap-4">
             <TextInput
@@ -155,7 +259,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
 
       <div className="flex justify-between gap-3">
         <Button href="/admin/status" variant="secondary" size="lg">
-          Åbn status
+          Aabn status
         </Button>
         <form action={logoutAdminAction}>
           <Button type="submit" variant="secondary" size="sm">

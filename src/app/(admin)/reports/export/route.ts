@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   });
 
   if (!csv) {
-    return new NextResponse("Ingen aktiv prøve.", { status: 404 });
+    return new NextResponse("Ingen aktiv proeve.", { status: 404 });
   }
 
   return new NextResponse(csv, {

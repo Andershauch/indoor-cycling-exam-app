@@ -62,7 +62,7 @@ export async function loginAdminAction(formData: FormData) {
       redirect("/admin/login?error=rate-limit");
     }
 
-    throw error;
+    redirect("/admin/login?error=send-failed");
   }
 
   redirect("/admin/login?sent=1");
@@ -605,28 +605,48 @@ export async function createInvitationAction(formData: FormData) {
     throw new Error("Vælg en gyldig kanal.");
   }
 
-  await createAndDispatchInvitation({
-    examSetId: examSet.id,
-    createdByAdminId: adminUser?.id ?? null,
-    channel: channelValue,
-    recipientName: String(formData.get("recipientName") ?? "").trim() || null,
-    recipientEmail: String(formData.get("recipientEmail") ?? "").trim() || null,
-    recipientPhone: String(formData.get("recipientPhone") ?? "").trim() || null,
-  });
+  const recipientName = String(formData.get("recipientName") ?? "").trim() || null;
+  const recipientEmail = String(formData.get("recipientEmail") ?? "").trim() || null;
+  const recipientPhone = String(formData.get("recipientPhone") ?? "").trim() || null;
+
+  try {
+    await createAndDispatchInvitation({
+      examSetId: examSet.id,
+      createdByAdminId: adminUser?.id ?? null,
+      channel: channelValue,
+      recipientName,
+      recipientEmail,
+      recipientPhone,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Invitationen kunne ikke oprettes.";
+
+    redirect(
+      `/invitations?${new URLSearchParams({
+        createError: message,
+      }).toString()}`,
+    );
+  }
 
   await logAdminAction({
     adminUserId: session.id,
     action: "INVITATION_CREATED",
     targetType: "exam_set",
     targetId: examSet.id,
-    targetLabel: String(formData.get("recipientEmail") ?? "").trim() || String(formData.get("recipientPhone") ?? "").trim() || "invitation",
+    targetLabel: recipientEmail || recipientPhone || recipientName || "invitation",
     metadata: {
       channel: channelValue,
     },
   });
 
   revalidatePath("/invitations");
-  redirect("/invitations");
+  redirect(
+    `/invitations?${new URLSearchParams({
+      createOk: "1",
+      recipient: recipientEmail || recipientPhone || recipientName || "Deltager",
+    }).toString()}`,
+  );
 }
 
 export async function createBatchInvitationsAction(formData: FormData) {
