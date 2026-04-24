@@ -1,6 +1,8 @@
-import { Prisma } from "@prisma/client";
+import { InvitationChannel, InvitationStatus, Prisma } from "@prisma/client";
 
 import { getPrismaClient } from "@/lib/db/prisma";
+import { getAppEnv } from "@/lib/config/app-env";
+import { generateInvitationToken } from "@/lib/invitations/token";
 
 const EXAM_SLUG = "playwright-e2e-flow";
 const QUESTION_PREFIX = "playwright-e2e";
@@ -40,18 +42,6 @@ const QUESTIONS: SeedQuestion[] = [
 export async function ensureE2EExamSet(adminUserId: string) {
   const prisma = getPrismaClient();
 
-  await prisma.examSet.updateMany({
-    where: {
-      isActive: true,
-      slug: {
-        not: EXAM_SLUG,
-      },
-    },
-    data: {
-      isActive: false,
-    },
-  });
-
   const examSet = await prisma.examSet.upsert({
     where: {
       slug: EXAM_SLUG,
@@ -62,7 +52,7 @@ export async function ensureE2EExamSet(adminUserId: string) {
       version: 1,
       timeLimitMinutes: 30,
       passPercentage: 60,
-      isActive: true,
+      isActive: false,
       publishedAt: new Date(),
       createdByAdminId: adminUserId,
     },
@@ -73,7 +63,7 @@ export async function ensureE2EExamSet(adminUserId: string) {
       version: 1,
       timeLimitMinutes: 30,
       passPercentage: 60,
-      isActive: true,
+      isActive: false,
       publishedAt: new Date(),
       createdByAdminId: adminUserId,
     },
@@ -194,6 +184,32 @@ export async function ensureE2EExamSet(adminUserId: string) {
   }
 
   return examSet;
+}
+
+export async function createE2EInvitation(input: {
+  examSetId: string;
+  adminUserId: string;
+  participantName: string;
+  participantEmail: string;
+}) {
+  const invitation = await getPrismaClient().invitation.create({
+    data: {
+      examSetId: input.examSetId,
+      createdByAdminId: input.adminUserId,
+      channel: InvitationChannel.EMAIL,
+      status: InvitationStatus.SENT,
+      token: generateInvitationToken(),
+      recipientName: input.participantName,
+      recipientEmail: input.participantEmail,
+      sentAt: new Date(),
+      expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000),
+    },
+  });
+
+  return {
+    invitationId: invitation.id,
+    invitationLink: `${getAppEnv().appUrl}/invite/${invitation.token}`,
+  };
 }
 
 export async function resetE2EInvitations() {

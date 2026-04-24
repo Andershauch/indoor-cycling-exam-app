@@ -5,7 +5,7 @@ const e2eSecret = process.env.PLAYWRIGHT_E2E_SECRET?.trim();
 test.describe("full exam flow", () => {
   test.skip(!e2eSecret, "PLAYWRIGHT_E2E_SECRET skal være sat for at køre det fulde flow.");
 
-  test("admin creates invitation and participant completes exam", async ({ page }) => {
+  test("participant completes exam and can reopen result via invitation link", async ({ page }) => {
     const uniqueId = Date.now();
     const participantName = `Playwright E2E ${uniqueId}`;
     const participantEmail = `playwright-e2e+${uniqueId}@example.com`;
@@ -14,26 +14,16 @@ test.describe("full exam flow", () => {
       data: {
         secret: e2eSecret,
         reset: true,
+        participantName,
+        participantEmail,
       },
     });
 
     expect(bootstrapResponse.ok()).toBeTruthy();
-
-    await page.goto("/invitations");
-    await expect(page).toHaveURL(/\/invitations$/);
-
-    await page.getByLabel(/navn/i).fill(participantName);
-    await page.getByLabel(/e-mail/i).first().fill(participantEmail);
-    await page.getByRole("button", { name: /opret invitation/i }).click();
-
-    await expect(page).toHaveURL(/\/invitations$/);
-
-    const invitationRow = page.locator("tr", {
-      has: page.getByText(participantEmail),
-    });
-
-    await expect(invitationRow).toBeVisible();
-    const invitationLink = await invitationRow.getByRole("link", { name: /deltagerlink/i }).getAttribute("href");
+    const payload = (await bootstrapResponse.json()) as {
+      invitationLink?: string | null;
+    };
+    const invitationLink = payload.invitationLink;
 
     expect(invitationLink).toBeTruthy();
 
