@@ -1,7 +1,12 @@
 import { AttemptStatus, Prisma } from "@prisma/client";
 
 import { getPrismaClient } from "@/lib/db/prisma";
-import type { AttemptExamSnapshot, AttemptQuestionState, ExamQuestionView } from "@/lib/exam/types";
+import type {
+  AttemptExamSnapshot,
+  AttemptQuestionState,
+  ExamQuestionView,
+} from "@/lib/exam/types";
+import { getParticipantSession } from "@/lib/participant/auth";
 
 function decimalToNumber(value: Prisma.Decimal | null) {
   return value ? Number(value) : null;
@@ -25,6 +30,7 @@ function mapQuestions(
       }>;
     };
   }>,
+  revealCorrectAnswers: boolean,
 ): ExamQuestionView[] {
   return examQuestions.map((examQuestion) => ({
     examQuestionId: examQuestion.id,
@@ -39,7 +45,7 @@ function mapQuestions(
         id: option.id,
         label: option.label,
         text: option.optionText,
-        isCorrect: option.isCorrect,
+        isCorrect: revealCorrectAnswers ? option.isCorrect : false,
       })),
   }));
 }
@@ -118,7 +124,7 @@ async function getExamSetForAttempt(examSetId?: string | null) {
 
 export async function createAttempt(input: {
   examSetId?: string | null;
-  invitationId?: string | null;
+  invitationId: string;
   participantName?: string | null;
   participantEmail?: string | null;
   participantPhone?: string | null;
@@ -126,11 +132,11 @@ export async function createAttempt(input: {
   const examSet = await getExamSetForAttempt(input.examSetId);
 
   if (!examSet) {
-    throw new Error("Der findes ingen aktiv prøve.");
+    throw new Error("Der findes ingen aktiv prove.");
   }
 
   if (examSet.examQuestions.length === 0) {
-    throw new Error("Den aktive prøve har ingen spørgsmål.");
+    throw new Error("Den aktive prove har ingen sporgsmal.");
   }
 
   const now = new Date();
@@ -140,7 +146,7 @@ export async function createAttempt(input: {
     const createdAttempt = await tx.participantAttempt.create({
       data: {
         examSetId: examSet.id,
-        invitationId: input.invitationId ?? null,
+        invitationId: input.invitationId,
         participantName: input.participantName?.trim() || null,
         participantEmail: input.participantEmail?.trim() || null,
         participantPhone: input.participantPhone?.trim() || null,
@@ -165,10 +171,29 @@ export async function createAttempt(input: {
   return attempt;
 }
 
-export async function getAttemptSnapshot(attemptId: string): Promise<AttemptExamSnapshot | null> {
-  const attempt = await getPrismaClient().participantAttempt.findUnique({
+async function requireParticipantInvitationId() {
+  const session = await getParticipantSession();
+
+  if (!session) {
+    throw new Error("Deltagersession mangler eller er udlobet.");
+  }
+
+  return session.invitationId;
+}
+
+export async function getAttemptSnapshot(
+  attemptId: string,
+): Promise<AttemptExamSnapshot | null> {
+  const invitationId = await requireParticipantInvitationId().catch(() => null);
+
+  if (!invitationId) {
+    return null;
+  }
+
+  const attempt = await getPrismaClient().participantAttempt.findFirst({
     where: {
       id: attemptId,
+      invitationId,
     },
     include: {
       examSet: {
@@ -219,7 +244,10 @@ export async function getAttemptSnapshot(attemptId: string): Promise<AttemptExam
     totalQuestionCount: attempt.totalQuestionCount ?? attempt.examSet.examQuestions.length,
     scorePercentage: decimalToNumber(attempt.scorePercentage),
     participantName: attempt.participantName,
-    questions: mapQuestions(attempt.examSet.examQuestions),
+    questions: mapQuestions(
+      attempt.examSet.examQuestions,
+      attempt.status !== AttemptStatus.IN_PROGRESS,
+    ),
     answers: mapAnswers(attempt.answers),
   };
 }
@@ -229,9 +257,11 @@ export async function saveAnswer(input: {
   examQuestionId: string;
   selectedOptionId: string | null;
 }) {
-  const attempt = await getPrismaClient().participantAttempt.findUnique({
+  const invitationId = await requireParticipantInvitationId();
+  const attempt = await getPrismaClient().participantAttempt.findFirst({
     where: {
       id: input.attemptId,
+      invitationId,
     },
     select: {
       status: true,
@@ -241,16 +271,16 @@ export async function saveAnswer(input: {
   });
 
   if (!attempt) {
-    throw new Error("Forsøget blev ikke fundet.");
+    throw new Error("Forsoget blev ikke fundet eller tilhorer ikke den aktive session.");
   }
 
   if (attempt.status !== AttemptStatus.IN_PROGRESS) {
-    throw new Error("Forsøget er allerede afleveret.");
+    throw new Error("Forsoget er allerede afleveret.");
   }
 
   if (attempt.expiresAt && attempt.expiresAt.getTime() <= Date.now()) {
     await submitAttempt(input.attemptId, "AUTO_SUBMITTED");
-    throw new Error("Tiden er udløbet, og prøven er afleveret automatisk.");
+    throw new Error("Tiden er udlobet, og proven er afleveret automatisk.");
   }
 
   const validQuestion = await getPrismaClient().examQuestion.findFirst({
@@ -268,14 +298,14 @@ export async function saveAnswer(input: {
   });
 
   if (!validQuestion) {
-    throw new Error("Spørgsmålet hører ikke til forsøget.");
+    throw new Error("Sporgsmalet horer ikke til forsoget.");
   }
 
   if (
     input.selectedOptionId &&
     !validQuestion.question.options.some((option) => option.id === input.selectedOptionId)
   ) {
-    throw new Error("Svarmuligheden hører ikke til spørgsmålet.");
+    throw new Error("Svarmuligheden horer ikke til sporgsmalet.");
   }
 
   await getPrismaClient().$transaction([
@@ -312,12 +342,13 @@ export async function updateAttemptProgress(input: {
   attemptId: string;
   currentQuestionIndex: number;
 }) {
-  const attempt = await getPrismaClient().participantAttempt.findUnique({
+  const invitationId = await requireParticipantInvitationId();
+  const attempt = await getPrismaClient().participantAttempt.findFirst({
     where: {
       id: input.attemptId,
+      invitationId,
     },
     select: {
-      id: true,
       status: true,
       expiresAt: true,
       totalQuestionCount: true,
@@ -334,16 +365,16 @@ export async function updateAttemptProgress(input: {
   });
 
   if (!attempt) {
-    throw new Error("Forsøget blev ikke fundet.");
+    throw new Error("Forsoget blev ikke fundet eller tilhorer ikke den aktive session.");
   }
 
   if (attempt.status !== AttemptStatus.IN_PROGRESS) {
-    throw new Error("Forsøget er ikke længere aktivt.");
+    throw new Error("Forsoget er ikke laengere aktivt.");
   }
 
   if (attempt.expiresAt && attempt.expiresAt.getTime() <= Date.now()) {
     await submitAttempt(input.attemptId, "AUTO_SUBMITTED");
-    throw new Error("Tiden er udløbet, og prøven er afleveret automatisk.");
+    throw new Error("Tiden er udlobet, og proven er afleveret automatisk.");
   }
 
   const questionCount =
@@ -366,10 +397,13 @@ export async function submitAttempt(
   attemptId: string,
   status: "SUBMITTED" | "AUTO_SUBMITTED" = "SUBMITTED",
 ) {
+  const invitationId = await requireParticipantInvitationId();
+
   return getPrismaClient().$transaction(async (tx) => {
-    const attempt = await tx.participantAttempt.findUnique({
+    const attempt = await tx.participantAttempt.findFirst({
       where: {
         id: attemptId,
+        invitationId,
       },
       include: {
         examSet: {
@@ -393,7 +427,7 @@ export async function submitAttempt(
     });
 
     if (!attempt) {
-      throw new Error("Forsøget blev ikke fundet.");
+      throw new Error("Forsoget blev ikke fundet eller tilhorer ikke den aktive session.");
     }
 
     if (attempt.status !== AttemptStatus.IN_PROGRESS) {
@@ -429,7 +463,11 @@ export async function submitAttempt(
     const answeredCount = attempt.answers.filter((answer) => answer.selectedOptionId).length;
     const correctAnswerCount = attempt.answers.filter((answer) => {
       const correctOptionId = correctByExamQuestionId.get(answer.examQuestionId) ?? null;
-      return Boolean(answer.selectedOptionId && correctOptionId && answer.selectedOptionId === correctOptionId);
+      return Boolean(
+        answer.selectedOptionId &&
+          correctOptionId &&
+          answer.selectedOptionId === correctOptionId,
+      );
     }).length;
 
     const totalQuestionCount = attempt.examSet.examQuestions.length;

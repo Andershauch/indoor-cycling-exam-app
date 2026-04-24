@@ -3,6 +3,7 @@ import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { logoutAdminAction } from "@/lib/admin/actions";
+import { getAdminSession } from "@/lib/admin/auth";
 import { getAdminDashboardSnapshot, getAdminReportsSnapshot } from "@/lib/admin/data";
 import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
@@ -62,10 +63,11 @@ function formatParticipantStatus(input: {
 }
 
 export default async function AdminStatusPage() {
-  const [dashboard, invitationSnapshot, reports] = await Promise.all([
+  const [dashboard, invitationSnapshot, reports, adminSession] = await Promise.all([
     getAdminDashboardSnapshot(),
     getAdminInvitationsSnapshot(),
     getAdminReportsSnapshot(),
+    getAdminSession(),
   ]);
 
   if (!dashboard || !invitationSnapshot || !reports) {
@@ -106,16 +108,9 @@ export default async function AdminStatusPage() {
       ),
       result: scoreLabel,
       actions: (
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button href={invitation.invitationLink} variant="secondary" size="sm">
-            Link
-          </Button>
-          {invitation.latestAttemptId ? (
-            <Button href={`/result/${invitation.latestAttemptId}`} size="sm">
-              Resultat
-            </Button>
-          ) : null}
-        </div>
+        <Button href={invitation.invitationLink} variant="secondary" size="sm">
+          Link
+        </Button>
       ),
     };
   });
@@ -132,8 +127,8 @@ export default async function AdminStatusPage() {
     score: attempt.scorePercentage === null ? "—" : `${Math.round(attempt.scorePercentage)}%`,
     submitted: formatDate(attempt.submittedAt),
     actions: (
-      <Button href={`/result/${attempt.id}`} variant="secondary" size="sm">
-        Åbn
+      <Button href="/reports" variant="secondary" size="sm">
+        Rapporter
       </Button>
     ),
   }));
@@ -149,9 +144,16 @@ export default async function AdminStatusPage() {
             <Button href="/admin" variant="secondary" size="lg">
               Ny upload
             </Button>
-            <Button href="/questions" variant="secondary" size="lg">
-              Spørgsmål
-            </Button>
+            {adminSession?.role === "SUPER_ADMIN" ? (
+              <>
+                <Button href="/questions" variant="secondary" size="lg">
+                  Spørgsmål
+                </Button>
+                <Button href="/admins" variant="secondary" size="lg">
+                  Admins
+                </Button>
+              </>
+            ) : null}
             <Button href="/reports" variant="secondary" size="lg">
               Se rapporter
             </Button>

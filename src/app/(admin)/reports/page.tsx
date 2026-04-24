@@ -22,7 +22,6 @@ const columns = [
   { key: "result", label: "Resultat" },
   { key: "status", label: "Status" },
   { key: "submitted", label: "Afleveret" },
-  { key: "actions", label: "Vis", align: "right" as const },
 ];
 
 const hardestQuestionColumns = [
@@ -91,11 +90,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       </div>
     ),
     submitted: formatDate(attempt.submittedAt),
-    actions: (
-      <Button href={`/result/${attempt.id}`} variant="secondary" size="sm">
-        Åbn
-      </Button>
-    ),
   }));
 
   const hardestQuestionRows = snapshot.hardestQuestions.map((question) => ({

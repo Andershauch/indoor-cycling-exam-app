@@ -10,6 +10,14 @@ import { createAttempt } from "@/lib/exam/service";
 import { sendInvitationEmail } from "@/lib/invitations/email-service";
 import { sendInvitationSms } from "@/lib/invitations/sms-service";
 import { generateInvitationToken } from "@/lib/invitations/token";
+import {
+  clearParticipantSession,
+  createParticipantSession,
+  doesParticipantSessionMatchInvitation,
+  generateParticipantSessionNonce,
+  getParticipantSessionDurationMs,
+  hashParticipantSessionNonce,
+} from "@/lib/participant/auth";
 import type {
   InvitationDispatchPayload,
   InvitationDispatchResult,
@@ -33,6 +41,26 @@ async function dispatchInvitation(
   }
 
   return sendInvitationSms(payload);
+}
+
+function getParticipantSessionExpiryDate() {
+  return new Date(Date.now() + getParticipantSessionDurationMs());
+}
+
+async function createFreshParticipantSession(invitationId: string) {
+  const nonce = generateParticipantSessionNonce();
+  const expiresAt = getParticipantSessionExpiryDate();
+
+  await createParticipantSession({
+    invitationId,
+    nonce,
+    expiresAt,
+  });
+
+  return {
+    nonceHash: hashParticipantSessionNonce(nonce),
+    expiresAt,
+  };
 }
 
 export async function createAndDispatchInvitation(input: {
@@ -163,7 +191,7 @@ export async function getAdminInvitationsSnapshot() {
   };
 }
 
-export async function getInvitationEntryState(token: string) {
+export async function resolveInvitationLink(token: string) {
   const prisma = getPrismaClient();
   const invitation = await prisma.invitation.findUnique({
     where: {
@@ -197,6 +225,7 @@ export async function getInvitationEntryState(token: string) {
   const isExpired = invitation.expiresAt ? invitation.expiresAt.getTime() <= Date.now() : false;
 
   if (isExpired) {
+    await clearParticipantSession();
     await prisma.invitation.update({
       where: {
         id: invitation.id,
@@ -217,31 +246,19 @@ export async function getInvitationEntryState(token: string) {
 
   const latestAttempt = invitation.attempts[0];
   const hasActiveAttempt = latestAttempt?.status === AttemptStatus.IN_PROGRESS;
-
-  if (hasActiveAttempt) {
-    if (invitation.status === InvitationStatus.CREATED || invitation.status === InvitationStatus.SENT) {
-      await prisma.invitation.update({
-        where: {
-          id: invitation.id,
-        },
-        data: {
-          status: InvitationStatus.OPENED,
-          openedAt: invitation.openedAt ?? new Date(),
-        },
-      });
-    }
-
-    return {
-      state: "exam" as const,
-      attemptId: latestAttempt.id,
-    };
-  }
+  const hasMatchingSession = await doesParticipantSessionMatchInvitation({
+    invitationId: invitation.id,
+    expectedNonceHash: invitation.participantSessionNonceHash,
+    expectedExpiresAt: invitation.participantSessionExpiresAt,
+  });
 
   if (
     latestAttempt &&
     (latestAttempt.status === AttemptStatus.SUBMITTED ||
       latestAttempt.status === AttemptStatus.AUTO_SUBMITTED)
   ) {
+    const nextSession = await createFreshParticipantSession(invitation.id);
+
     if (invitation.status !== InvitationStatus.COMPLETED) {
       await prisma.invitation.update({
         where: {
@@ -250,13 +267,37 @@ export async function getInvitationEntryState(token: string) {
         data: {
           status: InvitationStatus.COMPLETED,
           completedAt: new Date(),
+          participantSessionNonceHash: nextSession.nonceHash,
+          participantSessionExpiresAt: nextSession.expiresAt,
+        },
+      });
+    } else {
+      await prisma.invitation.update({
+        where: {
+          id: invitation.id,
+        },
+        data: {
+          participantSessionNonceHash: nextSession.nonceHash,
+          participantSessionExpiresAt: nextSession.expiresAt,
         },
       });
     }
 
     return {
-      state: "result" as const,
+      state: "redirect_result" as const,
       attemptId: latestAttempt.id,
+    };
+  }
+
+  if (
+    hasActiveAttempt &&
+    invitation.participantSessionNonceHash &&
+    invitation.participantSessionExpiresAt &&
+    invitation.participantSessionExpiresAt.getTime() > Date.now() &&
+    !hasMatchingSession
+  ) {
+    return {
+      state: "locked" as const,
       invitation: {
         recipientName: invitation.recipientName,
         examTitle: invitation.examSet.title,
@@ -264,117 +305,9 @@ export async function getInvitationEntryState(token: string) {
     };
   }
 
-  if (invitation.status === InvitationStatus.CREATED || invitation.status === InvitationStatus.SENT) {
-    await prisma.invitation.update({
-      where: {
-        id: invitation.id,
-      },
-      data: {
-        status: InvitationStatus.OPENED,
-        openedAt: invitation.openedAt ?? new Date(),
-      },
-    });
-  }
-
-  return {
-    state: hasActiveAttempt ? ("resume" as const) : ("start" as const),
-    attemptId: hasActiveAttempt ? latestAttempt.id : null,
-    invitation: {
-      id: invitation.id,
-      recipientName: invitation.recipientName,
-      recipientEmail: invitation.recipientEmail,
-      recipientPhone: invitation.recipientPhone,
-      examTitle: invitation.examSet.title,
-      timeLimitMinutes: invitation.examSet.timeLimitMinutes,
-      totalQuestionCount: invitation.examSet.examQuestions.length,
-      openedAt: invitation.openedAt,
-    },
-  };
-}
-
-export async function startInvitationAttempt(token: string) {
-  const prisma = getPrismaClient();
-  const invitation = await prisma.invitation.findUnique({
-    where: {
-      token,
-    },
-    include: {
-      examSet: true,
-      attempts: {
-        orderBy: {
-          startedAt: "desc",
-        },
-        take: 1,
-      },
-    },
-  });
-
-  if (!invitation) {
-    return {
-      state: "invalid" as const,
-    };
-  }
-
-  const isExpired = invitation.expiresAt ? invitation.expiresAt.getTime() <= Date.now() : false;
-
-  if (isExpired) {
-    await prisma.invitation.update({
-      where: {
-        id: invitation.id,
-      },
-      data: {
-        status: InvitationStatus.EXPIRED,
-      },
-    });
-
-    return {
-      state: "expired" as const,
-    };
-  }
-
-  const latestAttempt = invitation.attempts[0];
-
-  if (latestAttempt?.status === AttemptStatus.IN_PROGRESS) {
-    if (invitation.status === InvitationStatus.CREATED || invitation.status === InvitationStatus.SENT) {
-      await prisma.invitation.update({
-        where: {
-          id: invitation.id,
-        },
-        data: {
-          status: InvitationStatus.OPENED,
-          openedAt: invitation.openedAt ?? new Date(),
-        },
-      });
-    }
-
-    return {
-      state: "exam" as const,
-      attemptId: latestAttempt.id,
-    };
-  }
-
-  if (
-    latestAttempt &&
-    (latestAttempt.status === AttemptStatus.SUBMITTED ||
-      latestAttempt.status === AttemptStatus.AUTO_SUBMITTED)
-  ) {
-    if (invitation.status !== InvitationStatus.COMPLETED) {
-      await prisma.invitation.update({
-        where: {
-          id: invitation.id,
-        },
-        data: {
-          status: InvitationStatus.COMPLETED,
-          completedAt: new Date(),
-        },
-      });
-    }
-
-    return {
-      state: "result" as const,
-      attemptId: latestAttempt.id,
-    };
-  }
+  const nextSession = hasMatchingSession
+    ? null
+    : await createFreshParticipantSession(invitation.id);
 
   await prisma.invitation.update({
     where: {
@@ -383,8 +316,19 @@ export async function startInvitationAttempt(token: string) {
     data: {
       status: InvitationStatus.OPENED,
       openedAt: invitation.openedAt ?? new Date(),
+      participantSessionNonceHash:
+        nextSession?.nonceHash ?? invitation.participantSessionNonceHash,
+      participantSessionExpiresAt:
+        nextSession?.expiresAt ?? invitation.participantSessionExpiresAt,
     },
   });
+
+  if (latestAttempt?.status === AttemptStatus.IN_PROGRESS) {
+    return {
+      state: "redirect_exam" as const,
+      attemptId: latestAttempt.id,
+    };
+  }
 
   const attempt = await createAttempt({
     examSetId: invitation.examSetId,
@@ -395,7 +339,7 @@ export async function startInvitationAttempt(token: string) {
   });
 
   return {
-    state: "exam" as const,
+    state: "redirect_exam" as const,
     attemptId: attempt.id,
   };
 }

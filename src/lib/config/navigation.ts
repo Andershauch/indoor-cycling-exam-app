@@ -1,7 +1,5 @@
-import type { Route } from "next";
-
 type NavigationItem = {
-  href: Route;
+  href: string;
   label: string;
 };
 
@@ -14,6 +12,7 @@ export const primaryNavigation: NavigationItem[] = [
 
 export const adminNavigation: NavigationItem[] = [
   { href: "/admin", label: "Overblik" },
+  { href: "/admins", label: "Admins" },
   { href: "/questions", label: "Spørgsmål" },
   { href: "/invitations", label: "Invitationer" },
   { href: "/reports", label: "Rapporter" },

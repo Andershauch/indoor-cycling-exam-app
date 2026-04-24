@@ -1,4 +1,4 @@
-import { AttemptStatus, Prisma } from "@prisma/client";
+import { AdminRole, AttemptStatus, Prisma } from "@prisma/client";
 
 import { getPrismaClient } from "@/lib/db/prisma";
 
@@ -186,6 +186,55 @@ export async function getAdminDashboardSnapshot() {
       expired: invitationCounts.EXPIRED ?? 0,
     },
     hardestQuestions: reportSnapshot.hardestQuestions.slice(0, 3),
+  };
+}
+
+export async function getAdminUsersSnapshot() {
+  const prisma = getPrismaClient();
+  const adminUsers = await prisma.adminUser.findMany({
+    orderBy: [
+      {
+        role: "asc",
+      },
+      {
+        email: "asc",
+      },
+    ],
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      isActive: true,
+      lastMagicLinkSentAt: true,
+      createdAt: true,
+      updatedAt: true,
+      _count: {
+        select: {
+          createdInvites: true,
+          createdExams: true,
+        },
+      },
+    },
+  });
+
+  const superAdminEmail = (
+    process.env.SUPER_ADMIN_EMAIL ??
+    process.env.ADMIN_LOGIN_EMAIL ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  return {
+    users: adminUsers.map((user) => ({
+      ...user,
+      isBootstrapSuperAdmin: user.email.toLowerCase() === superAdminEmail,
+    })),
+    roleOptions: [
+      { value: AdminRole.EDITOR, label: "Admin" },
+      { value: AdminRole.SUPER_ADMIN, label: "Superadmin" },
+    ],
   };
 }
 

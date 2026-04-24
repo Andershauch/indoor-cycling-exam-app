@@ -2,14 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { AdminRole, InvitationChannel } from "@prisma/client";
 
 import {
   clearAdminSession,
-  createAdminSession,
-  getAdminLoginConfig,
   isAdminLoginConfigured,
+  issueAdminMagicLink,
   requireAdminSession,
-  verifyAdminCredentials,
 } from "@/lib/admin/auth";
 import {
   ensureEditableExamSet,
@@ -18,8 +17,9 @@ import {
 } from "@/lib/admin/data";
 import { parseParticipantBatchFile } from "@/lib/admin/participant-batch-import";
 import { getPrismaClient } from "@/lib/db/prisma";
-import { InvitationChannel } from "@prisma/client";
 import { createAndDispatchInvitation } from "@/lib/invitations/service";
+
+const ADMINS_ROUTE = "/admins" as Parameters<typeof redirect>[0];
 
 export async function loginAdminAction(formData: FormData) {
   if (!isAdminLoginConfigured()) {
@@ -27,31 +27,13 @@ export async function loginAdminAction(formData: FormData) {
   }
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const password = String(formData.get("password") ?? "").trim();
-  const config = getAdminLoginConfig();
 
-  if (!verifyAdminCredentials(email, password)) {
-    redirect("/admin/login?error=credentials");
+  if (!email) {
+    redirect("/admin/login?error=email");
   }
 
-  await createAdminSession(config.email);
-
-  const prisma = getPrismaClient();
-  await prisma.adminUser.upsert({
-    where: {
-      email: config.email,
-    },
-    update: {
-      name: config.name,
-      isActive: true,
-    },
-    create: {
-      email: config.email,
-      name: config.name,
-    },
-  });
-
-  redirect("/admin");
+  await issueAdminMagicLink(email);
+  redirect("/admin/login?sent=1");
 }
 
 export async function logoutAdminAction() {
@@ -59,8 +41,170 @@ export async function logoutAdminAction() {
   redirect("/admin/login");
 }
 
+export async function createAdminUserAction(formData: FormData) {
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim();
+  const roleValue = String(formData.get("role") ?? "").trim().toUpperCase();
+
+  if (!email) {
+    throw new Error("Admin-e-mail mangler.");
+  }
+
+  if (roleValue !== AdminRole.EDITOR && roleValue !== AdminRole.SUPER_ADMIN) {
+    throw new Error("Vælg en gyldig admin-rolle.");
+  }
+
+  const bootstrapSuperAdminEmail = (
+    process.env.SUPER_ADMIN_EMAIL ??
+    process.env.ADMIN_LOGIN_EMAIL ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (email === bootstrapSuperAdminEmail && roleValue !== AdminRole.SUPER_ADMIN) {
+    throw new Error("Bootstrap-superadmin skal oprettes som superadmin.");
+  }
+
+  const prisma = getPrismaClient();
+  await prisma.adminUser.upsert({
+    where: {
+      email,
+    },
+    update: {
+      name: name || undefined,
+      role: roleValue,
+      isActive: true,
+    },
+    create: {
+      email,
+      name: name || email.split("@")[0] || "Admin",
+      role: roleValue,
+      isActive: true,
+    },
+  });
+
+  revalidatePath(ADMINS_ROUTE);
+  redirect(ADMINS_ROUTE);
+}
+
+export async function updateAdminUserRoleAction(formData: FormData) {
+  const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
+  const adminUserId = String(formData.get("adminUserId") ?? "").trim();
+  const roleValue = String(formData.get("role") ?? "").trim().toUpperCase();
+
+  if (!adminUserId) {
+    throw new Error("adminUserId mangler.");
+  }
+
+  if (roleValue !== AdminRole.EDITOR && roleValue !== AdminRole.SUPER_ADMIN) {
+    throw new Error("Vælg en gyldig admin-rolle.");
+  }
+
+  const prisma = getPrismaClient();
+  const target = await prisma.adminUser.findUnique({
+    where: {
+      id: adminUserId,
+    },
+    select: {
+      id: true,
+      email: true,
+    },
+  });
+
+  if (!target) {
+    throw new Error("Admin-brugeren blev ikke fundet.");
+  }
+
+  const bootstrapSuperAdminEmail = (
+    process.env.SUPER_ADMIN_EMAIL ??
+    process.env.ADMIN_LOGIN_EMAIL ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (target.email.toLowerCase() === bootstrapSuperAdminEmail && roleValue !== AdminRole.SUPER_ADMIN) {
+    throw new Error("Bootstrap-superadmin kan ikke nedgraderes.");
+  }
+
+  await prisma.adminUser.update({
+    where: {
+      id: adminUserId,
+    },
+    data: {
+      role: roleValue,
+    },
+  });
+
+  revalidatePath(ADMINS_ROUTE);
+
+  if (session.id === adminUserId) {
+    redirect(ADMINS_ROUTE);
+  }
+
+  redirect(ADMINS_ROUTE);
+}
+
+export async function toggleAdminUserActiveAction(formData: FormData) {
+  const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
+  const adminUserId = String(formData.get("adminUserId") ?? "").trim();
+  const nextActive = String(formData.get("nextActive") ?? "").trim() === "true";
+
+  if (!adminUserId) {
+    throw new Error("adminUserId mangler.");
+  }
+
+  const prisma = getPrismaClient();
+  const target = await prisma.adminUser.findUnique({
+    where: {
+      id: adminUserId,
+    },
+    select: {
+      id: true,
+      email: true,
+    },
+  });
+
+  if (!target) {
+    throw new Error("Admin-brugeren blev ikke fundet.");
+  }
+
+  const bootstrapSuperAdminEmail = (
+    process.env.SUPER_ADMIN_EMAIL ??
+    process.env.ADMIN_LOGIN_EMAIL ??
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (target.email.toLowerCase() === bootstrapSuperAdminEmail && !nextActive) {
+    throw new Error("Bootstrap-superadmin kan ikke deaktiveres.");
+  }
+
+  await prisma.adminUser.update({
+    where: {
+      id: adminUserId,
+    },
+    data: {
+      isActive: nextActive,
+    },
+  });
+
+  revalidatePath(ADMINS_ROUTE);
+
+  if (session.id === adminUserId && !nextActive) {
+    await clearAdminSession();
+    redirect("/admin/login");
+  }
+
+  redirect(ADMINS_ROUTE);
+}
+
 export async function createQuestionAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   const examSet = await ensureEditableExamSet();
@@ -106,7 +250,7 @@ export async function createQuestionAction(formData: FormData) {
 }
 
 export async function updateQuestionAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   await ensureEditableExamSet();
@@ -195,7 +339,7 @@ export async function updateQuestionAction(formData: FormData) {
 }
 
 export async function deleteQuestionAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   const examSet = await ensureEditableExamSet();
@@ -250,7 +394,7 @@ export async function deleteQuestionAction(formData: FormData) {
 }
 
 export async function moveQuestionAction(formData: FormData) {
-  await requireAdminSession();
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
   const examSet = await ensureEditableExamSet();

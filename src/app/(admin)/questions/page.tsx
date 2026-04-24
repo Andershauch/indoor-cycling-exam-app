@@ -1,3 +1,4 @@
+import { AdminRole } from "@prisma/client";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { QuestionForm } from "@/components/admin/question-form";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
   moveQuestionAction,
   updateQuestionAction,
 } from "@/lib/admin/actions";
+import { requireAdminSession } from "@/lib/admin/auth";
 import {
   buildQuestionFormState,
   getActiveExamAdminSnapshot,
@@ -50,6 +52,8 @@ function formatAttemptStatus(status: string) {
 }
 
 export default async function QuestionsPage({ searchParams }: QuestionsPageProps) {
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
+
   const [{ edit }, snapshot] = await Promise.all([
     searchParams,
     getActiveExamAdminSnapshot(),
@@ -165,6 +169,9 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
           <div className="flex flex-wrap gap-3">
             <Button href="/admin" variant="secondary" size="lg">
               Til overblik
+            </Button>
+            <Button href="/admins" variant="secondary" size="lg">
+              Admins
             </Button>
             <form action={logoutAdminAction}>
               <Button type="submit" variant="secondary" size="lg">

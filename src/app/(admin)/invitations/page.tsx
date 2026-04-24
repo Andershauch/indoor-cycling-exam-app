@@ -108,16 +108,9 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       </div>
     ),
     actions: (
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button href={invitation.invitationLink} variant="secondary" size="sm">
-          Åbn link
-        </Button>
-        {invitation.latestAttemptId ? (
-          <Button href={`/result/${invitation.latestAttemptId}`} size="sm">
-            Resultat
-          </Button>
-        ) : null}
-      </div>
+      <Button href={invitation.invitationLink} variant="secondary" size="sm">
+        Deltagerlink
+      </Button>
     ),
   }));
 
@@ -144,8 +137,7 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       {params.batchOk ? (
         <Card tone="strong" title="Batch-upload gennemført" eyebrow="Importstatus">
           <p className="text-base leading-7 text-foreground">
-            Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:
-            {" "}
+            Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:{" "}
             {params.ignored ?? "0"}
           </p>
         </Card>
@@ -240,7 +232,7 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
             </label>
             <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
               <li>Kun navn og e-mail bliver gemt og brugt til invitationerne.</li>
-              <li>Tommer rækker, dubletter og rækker uden gyldig e-mail bliver ignoreret.</li>
+              <li>Tomme rækker, dubletter og rækker uden gyldig e-mail bliver ignoreret.</li>
               <li>Batch-upload sender invitationerne som e-mail med det samme.</li>
             </ul>
             <Button type="submit" size="lg">

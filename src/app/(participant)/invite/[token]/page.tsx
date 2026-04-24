@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { getInvitationEntryState, startInvitationAttempt } from "@/lib/invitations/service";
+import { resolveInvitationLink } from "@/lib/invitations/service";
 
 export const dynamic = "force-dynamic";
 
@@ -11,23 +11,7 @@ export default async function InvitationEntryPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const resolution = await getInvitationEntryState(token);
-
-  async function handleStart() {
-    "use server";
-
-    const nextStep = await startInvitationAttempt(token);
-
-    if (nextStep.state === "exam") {
-      redirect(`/exam/${nextStep.attemptId}`);
-    }
-
-    if (nextStep.state === "result") {
-      redirect(`/result/${nextStep.attemptId}`);
-    }
-
-    redirect(`/invite/${token}`);
-  }
+  const resolution = await resolveInvitationLink(token);
 
   if (resolution.state === "invalid" || resolution.state === "expired") {
     return (
@@ -54,11 +38,15 @@ export default async function InvitationEntryPage({
     );
   }
 
-  if (resolution.state === "result") {
+  if (resolution.state === "redirect_result") {
     redirect(`/result/${resolution.attemptId}`);
   }
 
-  if (resolution.state !== "start" && resolution.state !== "resume") {
+  if (resolution.state === "redirect_exam") {
+    redirect(`/exam/${resolution.attemptId}`);
+  }
+
+  if (resolution.state !== "locked") {
     redirect("/");
   }
 
@@ -68,44 +56,25 @@ export default async function InvitationEntryPage({
     <section className="participant-hero participant-surface mt-2">
       <div className="space-y-4">
         <p className="kicker">Invitation til prøve</p>
-        <h1 className="participant-title">
-          {resolution.state === "resume" ? "Fortsæt prøven" : "Klar til prøven?"}
-        </h1>
+        <h1 className="participant-title">Prøven er allerede åben</h1>
         <p className="participant-lead">
           {invitation.recipientName
-            ? `${invitation.recipientName}, du er inviteret til ${invitation.examTitle}.`
-            : `Du er inviteret til ${invitation.examTitle}.`}
+            ? `${invitation.recipientName}, din prøve i ${invitation.examTitle} er allerede aktiv på en anden enhed.`
+            : `Din prøve i ${invitation.examTitle} er allerede aktiv på en anden enhed.`}
         </p>
-      </div>
-
-      <div className="participant-meta-grid">
-        <div className="participant-meta-card">
-          <p className="participant-meta-label">Varighed</p>
-          <p className="participant-meta-value">{invitation.timeLimitMinutes} min</p>
-        </div>
-        <div className="participant-meta-card">
-          <p className="participant-meta-label">Spørgsmål</p>
-          <p className="participant-meta-value">{invitation.totalQuestionCount}</p>
-        </div>
       </div>
 
       <div className="participant-meta-card space-y-3">
         <p className="participant-meta-label">Det skal du vide</p>
-        <ul className="space-y-2 text-base leading-7 text-muted-foreground">
-          <li>Dine svar gemmes automatisk undervejs.</li>
-          <li>Du kan gå tilbage og ændre svar helt frem til aflevering.</li>
-          <li>Resultatet vises med det samme, når prøven er afleveret.</li>
-        </ul>
+        <p className="text-base leading-7 text-muted-foreground">
+          Af hensyn til eksamensintegritet tillades kun én aktiv deltager-session ad gangen.
+          Fortsæt på den enhed, hvor linket først blev åbnet, eller vent til sessionen udløber.
+        </p>
       </div>
 
-      <form action={handleStart} className="grid gap-3">
-        <Button type="submit" size="lg">
-          {resolution.state === "resume" ? "Fortsæt prøve" : "Start prøve"}
-        </Button>
-        <p className="text-center text-sm leading-6 text-muted-foreground">
-          Åbn prøven på din telefon for den bedste oplevelse.
-        </p>
-      </form>
+      <Button href="/" size="lg">
+        Gå til forsiden
+      </Button>
     </section>
   );
 }

@@ -7,6 +7,7 @@ import {
   createInvitationAction,
   logoutAdminAction,
 } from "@/lib/admin/actions";
+import { getAdminSession } from "@/lib/admin/auth";
 import { getAdminDashboardSnapshot } from "@/lib/admin/data";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,11 @@ type AdminPageProps = {
 };
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const [params, dashboard] = await Promise.all([searchParams, getAdminDashboardSnapshot()]);
+  const [params, dashboard, adminSession] = await Promise.all([
+    searchParams,
+    getAdminDashboardSnapshot(),
+    getAdminSession(),
+  ]);
 
   if (!dashboard) {
     return (
@@ -44,9 +49,16 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         description="Upload Excel-filen og send prøvelinks ud. Når uploaden er gennemført, fortsætter du til statussiden."
         actions={
           <div className="flex flex-wrap gap-3">
-            <Button href="/questions" variant="secondary" size="lg">
-              Spørgsmål
-            </Button>
+            {adminSession?.role === "SUPER_ADMIN" ? (
+              <>
+                <Button href="/questions" variant="secondary" size="lg">
+                  Spørgsmål
+                </Button>
+                <Button href="/admins" variant="secondary" size="lg">
+                  Admins
+                </Button>
+              </>
+            ) : null}
             <Button href="/reports" variant="secondary" size="lg">
               Se rapporter
             </Button>

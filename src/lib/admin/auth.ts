@@ -1,10 +1,24 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
+import { AdminRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getAppEnv } from "@/lib/config/app-env";
+import { getPrismaClient } from "@/lib/db/prisma";
+
 const ADMIN_SESSION_COOKIE = "admin_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 12;
+
+type AdminSessionPayload = {
+  adminUserId: string;
+  role: AdminRole;
+  expiresAt: number;
+};
+
+function normaliseEmail(value: string) {
+  return value.trim().toLowerCase();
+}
 
 function getAdminSecret() {
   const secret =
@@ -17,26 +31,74 @@ function getAdminSecret() {
   return secret;
 }
 
-function safeEqual(left: string, right: string) {
-  const leftBuffer = Buffer.from(left, "utf8");
-  const rightBuffer = Buffer.from(right, "utf8");
+function getAdminConfig() {
+  const superAdminEmail = normaliseEmail(
+    process.env.SUPER_ADMIN_EMAIL ?? process.env.ADMIN_LOGIN_EMAIL ?? "",
+  );
+  const superAdminName =
+    process.env.SUPER_ADMIN_NAME?.trim() ||
+    process.env.ADMIN_LOGIN_NAME?.trim() ||
+    "Super Admin";
+  const expiresMinutes = Math.max(
+    5,
+    Number(process.env.ADMIN_MAGIC_LINK_EXPIRES_MINUTES ?? 20),
+  );
+  const throttleSeconds = Math.max(
+    30,
+    Number(process.env.ADMIN_MAGIC_LINK_THROTTLE_SECONDS ?? 60),
+  );
 
-  if (leftBuffer.length !== rightBuffer.length) {
-    return false;
+  return {
+    superAdminEmail,
+    superAdminName,
+    expiresMinutes,
+    throttleSeconds,
+  };
+}
+
+export function isAdminLoginConfigured() {
+  const config = getAdminConfig();
+  return Boolean(
+    config.superAdminEmail &&
+      (process.env.ADMIN_SESSION_SECRET?.trim() || process.env.AUTH_SECRET?.trim()),
+  );
+}
+
+export function isBootstrapSuperAdminEmail(email: string) {
+  return normaliseEmail(email) === getAdminConfig().superAdminEmail;
+}
+
+function getDefaultName(email: string, role: AdminRole) {
+  const config = getAdminConfig();
+
+  if (role === AdminRole.SUPER_ADMIN && normaliseEmail(email) === config.superAdminEmail) {
+    return config.superAdminName;
   }
 
-  return timingSafeEqual(leftBuffer, rightBuffer);
+  const localPart = email.split("@")[0] ?? "Admin";
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
 }
 
 function signPayload(payload: string) {
   return createHmac("sha256", getAdminSecret()).update(payload).digest("hex");
 }
 
-function encodeToken(payload: string) {
-  return `${Buffer.from(payload, "utf8").toString("base64url")}.${signPayload(payload)}`;
+function hashMagicLinkToken(token: string) {
+  return createHash("sha256")
+    .update(`${getAdminSecret()}:${token}`)
+    .digest("hex");
 }
 
-function decodeToken(token: string) {
+function encodeSession(payload: AdminSessionPayload) {
+  const serialised = `${payload.adminUserId}|${payload.role}|${payload.expiresAt}`;
+  return `${Buffer.from(serialised, "utf8").toString("base64url")}.${signPayload(serialised)}`;
+}
+
+function decodeSession(token: string): AdminSessionPayload | null {
   const [encodedPayload, signature] = token.split(".");
 
   if (!encodedPayload || !signature) {
@@ -55,52 +117,241 @@ function decodeToken(token: string) {
     return null;
   }
 
-  const [email, expiresAt] = payload.split("|");
+  const [adminUserId, role, expiresAt] = payload.split("|");
 
-  if (!email || !expiresAt) {
+  if (
+    !adminUserId ||
+    (role !== AdminRole.SUPER_ADMIN && role !== AdminRole.EDITOR) ||
+    !expiresAt
+  ) {
+    return null;
+  }
+
+  const numericExpiresAt = Number(expiresAt);
+
+  if (!Number.isFinite(numericExpiresAt)) {
     return null;
   }
 
   return {
-    email,
-    expiresAt: Number(expiresAt),
+    adminUserId,
+    role,
+    expiresAt: numericExpiresAt,
   };
 }
 
-export function getAdminLoginConfig() {
-  return {
-    email: process.env.ADMIN_LOGIN_EMAIL?.trim().toLowerCase() ?? "",
-    password: process.env.ADMIN_LOGIN_PASSWORD?.trim() ?? "",
-    name: process.env.ADMIN_LOGIN_NAME?.trim() ?? "Admin",
-  };
+async function sendAdminMagicLinkEmail(input: {
+  email: string;
+  name: string;
+  magicLink: string;
+}) {
+  const apiKey = process.env.RESEND_API_KEY?.trim() || process.env.MAIL_PROVIDER_API_KEY?.trim();
+  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
+
+  if (!apiKey || !fromEmail) {
+    throw new Error("Magic link-mail kan ikke sendes, fordi mailopsætning mangler.");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: [input.email],
+      subject: "Dit admin-login til indoor cycling",
+      text: [
+        `Hej ${input.name},`,
+        "",
+        "Brug dette link for at logge ind i admin:",
+        input.magicLink,
+        "",
+        "Linket virker kun én gang og udløber automatisk.",
+      ].join("\n"),
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #111111; line-height: 1.6;">
+          <p>Hej ${input.name},</p>
+          <p>Brug dette link for at logge ind i admin:</p>
+          <p>
+            <a href="${input.magicLink}" style="display:inline-block;padding:12px 18px;background:#FEE81F;color:#111111;text-decoration:none;font-weight:700;border-radius:8px;">
+              Log ind i admin
+            </a>
+          </p>
+          <p>Hvis knappen ikke virker, kan du åbne linket direkte:</p>
+          <p><a href="${input.magicLink}">${input.magicLink}</a></p>
+          <p>Linket virker kun én gang og udløber automatisk.</p>
+        </div>
+      `.trim(),
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { message?: string }
+      | null;
+    throw new Error(payload?.message || "Magic link-mail kunne ikke sendes.");
+  }
 }
 
-export function isAdminLoginConfigured() {
-  const config = getAdminLoginConfig();
-  return Boolean(
-    config.email &&
-      config.password &&
-      (process.env.ADMIN_SESSION_SECRET?.trim() || process.env.AUTH_SECRET?.trim()),
-  );
+async function ensureBootstrapSuperAdmin() {
+  const config = getAdminConfig();
+
+  if (!config.superAdminEmail) {
+    return null;
+  }
+
+  return getPrismaClient().adminUser.upsert({
+    where: {
+      email: config.superAdminEmail,
+    },
+    update: {
+      role: AdminRole.SUPER_ADMIN,
+      isActive: true,
+      name: config.superAdminName,
+    },
+    create: {
+      email: config.superAdminEmail,
+      name: config.superAdminName,
+      role: AdminRole.SUPER_ADMIN,
+      isActive: true,
+    },
+  });
 }
 
-export function verifyAdminCredentials(email: string, password: string) {
-  const config = getAdminLoginConfig();
+async function findLoginEligibleAdmin(email: string) {
+  const normalisedEmail = normaliseEmail(email);
 
-  return safeEqual(email, config.email) && safeEqual(password, config.password);
+  if (isBootstrapSuperAdminEmail(normalisedEmail)) {
+    return ensureBootstrapSuperAdmin();
+  }
+
+  return getPrismaClient().adminUser.findUnique({
+    where: {
+      email: normalisedEmail,
+    },
+  });
 }
 
-export async function createAdminSession(email: string) {
+export async function issueAdminMagicLink(email: string) {
+  if (!isAdminLoginConfigured()) {
+    throw new Error("Admin-login er ikke konfigureret endnu.");
+  }
+
+  const adminUser = await findLoginEligibleAdmin(email);
+
+  if (!adminUser || !adminUser.isActive) {
+    return { delivered: false as const };
+  }
+
+  const prisma = getPrismaClient();
+  const config = getAdminConfig();
+  const now = new Date();
+
+  if (
+    adminUser.lastMagicLinkSentAt &&
+    now.getTime() - adminUser.lastMagicLinkSentAt.getTime() <
+      config.throttleSeconds * 1000
+  ) {
+    return { delivered: true as const };
+  }
+
+  const rawToken = randomBytes(32).toString("base64url");
+  const tokenHash = hashMagicLinkToken(rawToken);
+  const expiresAt = new Date(now.getTime() + config.expiresMinutes * 60 * 1000);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.adminMagicLinkToken.create({
+      data: {
+        adminUserId: adminUser.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    await tx.adminUser.update({
+      where: {
+        id: adminUser.id,
+      },
+      data: {
+        lastMagicLinkSentAt: now,
+      },
+    });
+  });
+
+  const magicLink = `${getAppEnv().appUrl}/admin/login/verify?token=${encodeURIComponent(rawToken)}`;
+  await sendAdminMagicLinkEmail({
+    email: adminUser.email,
+    name: adminUser.name,
+    magicLink,
+  });
+
+  return { delivered: true as const };
+}
+
+export async function createAdminSession(adminUser: {
+  id: string;
+  role: AdminRole;
+}) {
   const expiresAt = Date.now() + SESSION_DURATION_MS;
   const cookieStore = await cookies();
 
-  cookieStore.set(ADMIN_SESSION_COOKIE, encodeToken(`${email}|${expiresAt}`), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: new Date(expiresAt),
+  cookieStore.set(
+    ADMIN_SESSION_COOKIE,
+    encodeSession({
+      adminUserId: adminUser.id,
+      role: adminUser.role,
+      expiresAt,
+    }),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      expires: new Date(expiresAt),
+    },
+  );
+}
+
+export async function consumeAdminMagicLink(rawToken: string) {
+  const tokenHash = hashMagicLinkToken(rawToken);
+  const prisma = getPrismaClient();
+  const now = new Date();
+
+  const record = await prisma.adminMagicLinkToken.findUnique({
+    where: {
+      tokenHash,
+    },
+    include: {
+      adminUser: true,
+    },
   });
+
+  if (!record || record.usedAt || record.expiresAt.getTime() <= now.getTime()) {
+    return null;
+  }
+
+  const adminUser =
+    isBootstrapSuperAdminEmail(record.adminUser.email)
+      ? await ensureBootstrapSuperAdmin()
+      : record.adminUser;
+
+  if (!adminUser || !adminUser.isActive) {
+    return null;
+  }
+
+  await prisma.adminMagicLinkToken.update({
+    where: {
+      id: record.id,
+    },
+    data: {
+      usedAt: now,
+    },
+  });
+
+  await createAdminSession(adminUser);
+  return adminUser;
 }
 
 export async function clearAdminSession() {
@@ -116,24 +367,68 @@ export async function getAdminSession() {
     return null;
   }
 
-  const token = decodeToken(rawToken);
-  const config = getAdminLoginConfig();
+  const token = decodeSession(rawToken);
 
-  if (!token || token.expiresAt <= Date.now() || token.email !== config.email) {
+  if (!token || token.expiresAt <= Date.now()) {
     cookieStore.delete(ADMIN_SESSION_COOKIE);
     return null;
   }
 
-  return {
-    email: config.email,
-    name: config.name,
-  };
+  const adminUser = await getPrismaClient().adminUser.findUnique({
+    where: {
+      id: token.adminUserId,
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      isActive: true,
+    },
+  });
+
+  if (!adminUser) {
+    cookieStore.delete(ADMIN_SESSION_COOKIE);
+    return null;
+  }
+
+  if (isBootstrapSuperAdminEmail(adminUser.email)) {
+    const bootstrapped = await ensureBootstrapSuperAdmin();
+
+    if (!bootstrapped || token.role !== AdminRole.SUPER_ADMIN) {
+      cookieStore.delete(ADMIN_SESSION_COOKIE);
+      return null;
+    }
+
+    return {
+      id: bootstrapped.id,
+      email: bootstrapped.email,
+      name: bootstrapped.name,
+      role: bootstrapped.role,
+      isActive: bootstrapped.isActive,
+    };
+  }
+
+  if (!adminUser.isActive || token.role !== adminUser.role) {
+    cookieStore.delete(ADMIN_SESSION_COOKIE);
+    return null;
+  }
+
+  return adminUser;
 }
 
-export async function requireAdminSession() {
+function roleSatisfiesRequirement(actualRole: AdminRole, requiredRole: AdminRole) {
+  if (actualRole === AdminRole.SUPER_ADMIN) {
+    return true;
+  }
+
+  return actualRole === requiredRole;
+}
+
+export async function requireAdminSession(requiredRole: AdminRole = AdminRole.EDITOR) {
   const session = await getAdminSession();
 
-  if (!session) {
+  if (!session || !roleSatisfiesRequirement(session.role, requiredRole)) {
     redirect("/admin/login");
   }
 
