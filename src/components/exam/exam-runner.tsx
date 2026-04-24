@@ -45,6 +45,7 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
     return Math.max(0, new Date(attempt.expiresAt).getTime() - Date.now());
   });
   const autoSubmittedRef = useRef(false);
+  const activeIndexRef = useRef(attempt.currentQuestionIndex);
   const pendingSaveCountRef = useRef(0);
   const pendingAnswerSaveRef = useRef<Promise<void> | null>(null);
   const pendingProgressRef = useRef<Promise<void> | null>(null);
@@ -112,16 +113,15 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
     }
 
     autoAdvanceTimeoutRef.current = window.setTimeout(() => {
-      setActiveIndex((currentIndex) => {
-        if (currentIndex !== expectedIndex) {
-          return currentIndex;
-        }
+      if (activeIndexRef.current !== expectedIndex) {
+        autoAdvanceTimeoutRef.current = null;
+        return;
+      }
 
-        const nextIndex = Math.min(attempt.questions.length - 1, currentIndex + 1);
-        startTransition(() => {
-          void persistProgress(nextIndex);
-        });
-        return nextIndex;
+      const nextIndex = Math.min(attempt.questions.length - 1, expectedIndex + 1);
+      setActiveIndex(nextIndex);
+      startTransition(() => {
+        void persistProgress(nextIndex);
       });
       autoAdvanceTimeoutRef.current = null;
     }, 220);
@@ -288,6 +288,10 @@ export function ExamRunner({ attempt }: ExamRunnerProps) {
     autoSubmittedRef.current = true;
     void submitAttempt(true);
   });
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {

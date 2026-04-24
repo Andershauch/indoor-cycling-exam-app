@@ -30,7 +30,9 @@ export function TimerBadge({
       )}
     >
       <span className="text-xs font-bold uppercase tracking-[0.12em]">{label}</span>
-      <span className="font-display text-xl leading-none">{value}</span>
+      <span suppressHydrationWarning className="font-display text-xl leading-none">
+        {value}
+      </span>
     </div>
   );
 }
