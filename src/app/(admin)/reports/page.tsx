@@ -4,7 +4,6 @@ import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/text-input";
-import { logoutAdminAction } from "@/lib/admin/actions";
 import { getAdminReportsSnapshot } from "@/lib/admin/data";
 
 export const dynamic = "force-dynamic";
@@ -58,11 +57,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   if (!snapshot) {
     return (
-      <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
+      <div className="space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Rapporter"
-          title="INGEN AKTIV PRØVE"
+          title="Ingen aktiv prøve"
+          titleClassName="text-[clamp(2rem,4.5vw,3.2rem)] leading-[0.96] tracking-[-0.04em]"
           description="Der findes endnu ingen aktiv prøve at rapportere på."
+          descriptionClassName="max-w-3xl"
         />
       </div>
     );
@@ -116,11 +117,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   }
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
+    <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
-        eyebrow="Rapporter"
-        title="RESULTATER OG OVERBLIK"
-        description="Brug denne side til hurtigt at se, hvem der er færdige, hvem der stadig er i gang, og hvilke spørgsmål der oftest giver problemer."
+        eyebrow="Efter prøven"
+        title="Resultater og rapporter"
+        titleClassName="text-[clamp(2.15rem,5vw,3.55rem)] leading-[0.96] tracking-[-0.045em]"
+        description="Brug denne side bagefter til at se resultater, filtrere forsøg og eksportere data."
+        descriptionClassName="max-w-3xl"
         actions={
           <div className="flex flex-wrap gap-3">
             <Button
@@ -129,19 +132,15 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             >
               Eksporter CSV
             </Button>
-            <Button href="/admin/status" variant="secondary" size="lg">
-              Åbn status
-            </Button>
-            <form action={logoutAdminAction}>
-              <Button type="submit" variant="secondary" size="lg">
-                Log ud
-              </Button>
-            </form>
           </div>
         }
       />
 
-      <Card title="Filtrering" eyebrow="Find de rigtige resultater">
+      <Card
+        title="Filtrering"
+        eyebrow="Find de rigtige resultater"
+        titleClassName="text-[clamp(1.8rem,3.6vw,2.5rem)] leading-[0.98] tracking-[-0.03em]"
+      >
         <form action="/reports" className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr_0.8fr_auto]">
           <TextInput
             id="reports-query"
@@ -212,11 +211,15 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           emptyMessage="Ingen forsøg matcher det valgte filter."
         />
 
-        <Card title="Spørgsmål der driller" eyebrow="Læringsmønstre" className="space-y-4">
+        <Card
+          title="Spørgsmål der driller"
+          eyebrow="Læringsmønstre"
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
+          className="space-y-4"
+        >
           <p className="text-sm leading-6 text-muted-foreground">
             Listen er baseret på afleverede forsøg og viser de spørgsmål, som oftest bliver
-            besvaret forkert. Brug den til hurtigt at se, hvor undervisningen eller spørgsmålene
-            skal justeres.
+            besvaret forkert.
           </p>
           <AdminTable
             caption="Spørgsmål der driller"

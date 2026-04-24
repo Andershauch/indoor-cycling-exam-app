@@ -2,8 +2,6 @@ import { Button } from "@/components/ui/button";
 import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { logoutAdminAction } from "@/lib/admin/actions";
-import { getAdminSession } from "@/lib/admin/auth";
 import { getAdminDashboardSnapshot, getAdminReportsSnapshot } from "@/lib/admin/data";
 import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
@@ -105,20 +103,21 @@ function formatAuditAction(action: string) {
 }
 
 export default async function AdminStatusPage() {
-  const [dashboard, invitationSnapshot, reports, adminSession] = await Promise.all([
+  const [dashboard, invitationSnapshot, reports] = await Promise.all([
     getAdminDashboardSnapshot(),
     getAdminInvitationsSnapshot(),
     getAdminReportsSnapshot(),
-    getAdminSession(),
   ]);
 
   if (!dashboard || !invitationSnapshot || !reports) {
     return (
-      <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
+      <div className="space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Status"
-          title="INGEN AKTIV PRØVE"
+          title="Ingen aktiv prøve"
+          titleClassName="text-[clamp(2rem,4.5vw,3.2rem)] leading-[0.96] tracking-[-0.04em]"
           description="Importer eller opret først en aktiv prøve, før status og resultater kan vises."
+          descriptionClassName="max-w-3xl"
         />
       </div>
     );
@@ -197,31 +196,13 @@ export default async function AdminStatusPage() {
   );
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
+    <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
-        eyebrow="Trin 2"
-        title="FØLG PRØVEN LIGE NU"
-        description="Her ser du, hvem der er sendt til, hvem der er i gang, og hvilke resultater der er kommet ind."
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <Button href="/admin" variant="secondary" size="lg">
-              Ny upload
-            </Button>
-            {adminSession?.role === "SUPER_ADMIN" ? (
-              <>
-                <Button href="/questions" variant="secondary" size="lg">
-                  Spørgsmål
-                </Button>
-                <Button href="/admins" variant="secondary" size="lg">
-                  Admins
-                </Button>
-              </>
-            ) : null}
-            <Button href="/reports" variant="secondary" size="lg">
-              Se rapporter
-            </Button>
-          </div>
-        }
+        eyebrow="Under prøven"
+        title="Status under prøven"
+        titleClassName="text-[clamp(2.15rem,5vw,3.55rem)] leading-[0.96] tracking-[-0.045em]"
+        description="Status er den vigtigste side under afviklingen. Her ser du, hvem der er sendt til, hvem der er i gang, og hvilke resultater der er kommet ind."
+        descriptionClassName="max-w-3xl"
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -277,14 +258,6 @@ export default async function AdminStatusPage() {
           emptyMessage="Ingen admin-hændelser endnu."
         />
       </Card>
-
-      <div className="flex justify-end">
-        <form action={logoutAdminAction}>
-          <Button type="submit" variant="secondary" size="sm">
-            Log ud
-          </Button>
-        </form>
-      </div>
     </div>
   );
 }

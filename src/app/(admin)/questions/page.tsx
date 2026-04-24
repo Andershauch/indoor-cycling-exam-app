@@ -8,7 +8,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   createQuestionAction,
   deleteQuestionAction,
-  logoutAdminAction,
   moveQuestionAction,
   updateQuestionAction,
 } from "@/lib/admin/actions";
@@ -61,11 +60,13 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
 
   if (!snapshot) {
     return (
-      <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
+      <div className="space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
-          eyebrow="Spørgsmål"
-          title="INGEN AKTIV PRØVE"
+          eyebrow="System"
+          title="Ingen aktiv prøve"
+          titleClassName="text-[clamp(2rem,4.5vw,3.2rem)] leading-[0.96] tracking-[-0.04em]"
           description="Importér eller opret først en aktiv prøve, før spørgsmålene kan redigeres."
+          descriptionClassName="max-w-3xl"
         />
       </div>
     );
@@ -160,26 +161,13 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
   }));
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
+    <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
-        eyebrow="Spørgsmål"
-        title="SPØRGSMÅL OG RÆKKEFØLGE"
+        eyebrow="System"
+        title="Spørgsmål og rækkefølge"
+        titleClassName="text-[clamp(2.15rem,5vw,3.55rem)] leading-[0.96] tracking-[-0.045em]"
         description="Her vedligeholder du den faste prøve. Korrekte svar og rækkefølge er samlet i én arbejdsflade."
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <Button href="/admin" variant="secondary" size="lg">
-              Til overblik
-            </Button>
-            <Button href="/admins" variant="secondary" size="lg">
-              Admins
-            </Button>
-            <form action={logoutAdminAction}>
-              <Button type="submit" variant="secondary" size="lg">
-                Log ud
-              </Button>
-            </form>
-          </div>
-        }
+        descriptionClassName="max-w-3xl"
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -212,14 +200,19 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
       {questionsLocked ? (
         <Card tone="strong" title="Prøven er låst" eyebrow="Databeskyttelse">
           <p className="text-base leading-7 text-foreground">
-            Den aktive prøve har allerede deltagerforsøg. Derfor er opret, redigér,
-            slet og rækkefølgeændringer låst for at beskytte resultater og rapportdata.
+            Den aktive prøve har allerede deltagerforsøg. Derfor er opret, redigér, slet og
+            rækkefølgeændringer låst for at beskytte resultater og rapportdata.
           </p>
         </Card>
       ) : null}
 
       <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card title="Aktiv prøve" eyebrow="Status" className="space-y-5">
+        <Card
+          title="Aktiv prøve"
+          eyebrow="Status"
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
+          className="space-y-5"
+        >
           <dl className="grid gap-4 text-sm sm:grid-cols-2">
             <div>
               <dt className="font-bold uppercase tracking-[0.08em]">Titel</dt>
@@ -250,6 +243,7 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
         <Card
           title={selectedQuestion ? "Redigér spørgsmål" : "Opret spørgsmål"}
           eyebrow={selectedQuestion ? "Vedligehold" : "Nyt spørgsmål"}
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
         >
           {questionsLocked ? (
             <p className="text-sm leading-7 text-muted-foreground">

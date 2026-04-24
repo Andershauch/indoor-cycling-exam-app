@@ -8,6 +8,8 @@ type PageHeaderProps = {
   description?: string;
   actions?: ReactNode;
   className?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 };
 
 export function PageHeader({
@@ -16,6 +18,8 @@ export function PageHeader({
   description,
   actions,
   className,
+  titleClassName,
+  descriptionClassName,
 }: PageHeaderProps) {
   return (
     <header
@@ -27,9 +31,17 @@ export function PageHeader({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-4xl">
           {eyebrow ? <p className="kicker mb-3">{eyebrow}</p> : null}
-          <h1 className="display-title text-balance">{title}</h1>
+          <h1
+            className={cn(
+              "text-balance font-display font-black uppercase",
+              titleClassName ??
+                "text-(length:--text-3xl) leading-(--leading-tight) tracking-[-0.05em]",
+            )}
+          >
+            {title}
+          </h1>
           {description ? (
-            <p className="content-copy mt-4 text-base text-foreground">
+            <p className={cn("content-copy mt-4 text-base text-foreground", descriptionClassName)}>
               {description}
             </p>
           ) : null}

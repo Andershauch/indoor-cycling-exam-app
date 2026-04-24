@@ -6,7 +6,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TextInput } from "@/components/ui/text-input";
 import {
   createAdminUserAction,
-  logoutAdminAction,
   toggleAdminUserActiveAction,
   updateAdminUserRoleAction,
 } from "@/lib/admin/actions";
@@ -97,27 +96,21 @@ export default async function AdminUsersPage() {
   }));
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
+    <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
-        eyebrow="Superadmin"
-        title="ADMIN-BRUGERE"
+        eyebrow="System"
+        title="Admin-brugere"
+        titleClassName="text-[clamp(2.1rem,4.8vw,3.25rem)] leading-[0.96] tracking-[-0.04em]"
         description="Her styrer du, hvem der har adgang til admin, og hvilken rolle de har."
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <Button href="/admin" variant="secondary" size="lg">
-              Til overblik
-            </Button>
-            <form action={logoutAdminAction}>
-              <Button type="submit" variant="secondary" size="lg">
-                Log ud
-              </Button>
-            </form>
-          </div>
-        }
+        descriptionClassName="max-w-3xl"
       />
 
       <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card title="Opret admin" eyebrow="Ny adgang">
+        <Card
+          title="Opret admin"
+          eyebrow="Ny adgang"
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
+        >
           <form action={createAdminUserAction} className="grid gap-4">
             <TextInput
               id="admin-name"
@@ -153,7 +146,12 @@ export default async function AdminUsersPage() {
           </form>
         </Card>
 
-        <Card title="Rollepolitik" eyebrow="Adgangsniveauer" className="space-y-4">
+        <Card
+          title="Rollepolitik"
+          eyebrow="Adgangsniveauer"
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
+          className="space-y-4"
+        >
           <p className="text-sm leading-7 text-muted-foreground">
             Superadmin kan ændre spørgsmål, roller og alle systemopsætninger. Almindelig admin kan
             bruge magic link-login, uploade Excel-filer, sende invitationer og se rapporter.

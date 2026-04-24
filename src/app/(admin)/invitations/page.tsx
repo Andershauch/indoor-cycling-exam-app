@@ -6,7 +6,6 @@ import { TextInput } from "@/components/ui/text-input";
 import {
   createBatchInvitationsAction,
   createInvitationAction,
-  logoutAdminAction,
 } from "@/lib/admin/actions";
 import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
@@ -66,11 +65,13 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
 
   if (!snapshot) {
     return (
-      <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
+      <div className="space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Invitationer"
-          title="INGEN AKTIV PRØVE"
+          title="Ingen aktiv prøve"
+          titleClassName="text-[clamp(2rem,4.5vw,3.2rem)] leading-[0.96] tracking-[-0.04em]"
           description="Invitationer kræver en aktiv prøve, så linket kan pege direkte på den rigtige eksamen."
+          descriptionClassName="max-w-3xl"
         />
       </div>
     );
@@ -115,23 +116,13 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
   }));
 
   return (
-    <div className="slide-grid space-y-6 py-6 sm:py-8 lg:space-y-8 lg:py-10">
+    <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
-        eyebrow="Invitationer"
-        title="UDSENDELSER OG BATCH-UPLOAD"
-        description="Her kan du sende invitationer enkeltvis eller via Excel. Deltagerne får deres personlige prøvelink med det samme."
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <Button href="/admin" variant="secondary" size="lg">
-              Til overblik
-            </Button>
-            <form action={logoutAdminAction}>
-              <Button type="submit" variant="secondary" size="lg">
-                Log ud
-              </Button>
-            </form>
-          </div>
-        }
+        eyebrow="Før prøven"
+        title="Invitationer"
+        titleClassName="text-[clamp(2.1rem,4.8vw,3.3rem)] leading-[0.96] tracking-[-0.04em]"
+        description="Her opretter du invitationer enkeltvis eller via Excel. Brug denne side, hvis du vil arbejde direkte med udsendelserne."
+        descriptionClassName="max-w-3xl"
       />
 
       {params.createOk ? (
@@ -187,7 +178,11 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card title="Ny enkeltinvitation" eyebrow="Manuel oprettelse">
+        <Card
+          title="Ny enkeltinvitation"
+          eyebrow="Manuel oprettelse"
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
+        >
           <form action={createInvitationAction} className="grid gap-4">
             <TextInput
               id="recipient-name"
@@ -229,7 +224,12 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
           </form>
         </Card>
 
-        <Card title="Batch-upload fra Excel" eyebrow="Gruppeopsætning" className="space-y-4">
+        <Card
+          title="Batch-upload fra Excel"
+          eyebrow="Gruppeopsætning"
+          titleClassName="text-[clamp(1.95rem,3.8vw,2.8rem)] leading-[0.97] tracking-[-0.03em]"
+          className="space-y-4"
+        >
           <p className="text-sm leading-7 text-muted-foreground">
             Upload en deltagerliste i Excel-format. Systemet læser kun kolonnerne
             <strong> Fulde navn</strong> og <strong> E-mailadresse</strong> og ignorerer alt andet.

@@ -10,6 +10,7 @@ type CardProps = {
   children: ReactNode;
   tone?: CardTone;
   className?: string;
+  titleClassName?: string;
 };
 
 const toneClasses: Record<CardTone, string> = {
@@ -24,11 +25,22 @@ export function Card({
   children,
   tone = "default",
   className,
+  titleClassName,
 }: CardProps) {
   return (
     <section className={cn(toneClasses[tone], "p-5 sm:p-6", className)}>
       {eyebrow ? <p className="kicker mb-3">{eyebrow}</p> : null}
-      {title ? <h2 className="section-title mb-4 text-balance">{title}</h2> : null}
+      {title ? (
+        <h2
+          className={cn(
+            "mb-4 text-balance font-display font-black uppercase",
+            titleClassName ??
+              "text-(length:--text-2xl) leading-(--leading-snug) tracking-[-0.04em]",
+          )}
+        >
+          {title}
+        </h2>
+      ) : null}
       {children}
     </section>
   );
