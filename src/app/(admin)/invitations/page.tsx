@@ -51,11 +51,11 @@ function formatStatus(status: string) {
     case "SENT":
       return "Sendt";
     case "OPENED":
-      return "Aabnet af deltager";
+      return "Åbnet af deltager";
     case "COMPLETED":
-      return "Proeve gennemfoert";
+      return "Prøve gennemført";
     case "EXPIRED":
-      return "Udloebet";
+      return "Udløbet";
     default:
       return status;
   }
@@ -69,8 +69,8 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Invitationer"
-          title="INGEN AKTIV PROEVE"
-          description="Invitationer kraever en aktiv proeve, saa linket kan pege direkte paa den rigtige eksamen."
+          title="INGEN AKTIV PRØVE"
+          description="Invitationer kræver en aktiv prøve, så linket kan pege direkte på den rigtige eksamen."
         />
       </div>
     );
@@ -103,8 +103,8 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       <div className="space-y-1 text-xs text-muted-foreground">
         <p>Oprettet: {formatDate(invitation.createdAt)}</p>
         <p>Sendt: {formatDate(invitation.sentAt)}</p>
-        <p>Aabnet: {formatDate(invitation.openedAt)}</p>
-        <p>Faerdig: {formatDate(invitation.completedAt)}</p>
+        <p>Åbnet: {formatDate(invitation.openedAt)}</p>
+        <p>Færdig: {formatDate(invitation.completedAt)}</p>
       </div>
     ),
     actions: (
@@ -119,7 +119,7 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       <PageHeader
         eyebrow="Invitationer"
         title="UDSENDELSER OG BATCH-UPLOAD"
-        description="Her kan du sende invitationer enkeltvis eller via Excel. Deltagerne faar deres personlige proevelink med det samme."
+        description="Her kan du sende invitationer enkeltvis eller via Excel. Deltagerne får deres personlige prøvelink med det samme."
         actions={
           <div className="flex flex-wrap gap-3">
             <Button href="/admin" variant="secondary" size="lg">
@@ -149,7 +149,7 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       ) : null}
 
       {params.batchOk ? (
-        <Card tone="strong" title="Batch-upload gennemfoert" eyebrow="Importstatus">
+        <Card tone="strong" title="Batch-upload gennemført" eyebrow="Importstatus">
           <p className="text-base leading-7 text-foreground">
             Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:{" "}
             {params.ignored ?? "0"}
@@ -158,7 +158,7 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
       ) : null}
 
       {params.batchError ? (
-        <Card title="Batch-upload kunne ikke gennemfoeres" eyebrow="Fejl">
+        <Card title="Batch-upload kunne ikke gennemføres" eyebrow="Fejl">
           <p className="text-base leading-7 text-danger">{params.batchError}</p>
         </Card>
       ) : null}
@@ -173,15 +173,15 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
           <p className="font-display text-4xl">{statusCounts.SENT ?? 0}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Aabnet</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Åbnet</p>
           <p className="font-display text-4xl">{statusCounts.OPENED ?? 0}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Faerdige</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Færdige</p>
           <p className="font-display text-4xl">{statusCounts.COMPLETED ?? 0}</p>
         </Card>
         <Card className="space-y-2">
-          <p className="text-sm font-bold uppercase tracking-[0.08em]">Udloebne</p>
+          <p className="text-sm font-bold uppercase tracking-[0.08em]">Udløbne</p>
           <p className="font-display text-4xl">{statusCounts.EXPIRED ?? 0}</p>
         </Card>
       </section>
@@ -201,14 +201,14 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
               label="E-mail"
               type="email"
               placeholder="navn@example.com"
-              hint="Paakraevet ved e-mailinvitation."
+              hint="Påkrævet ved e-mailinvitation."
             />
             <TextInput
               id="recipient-phone"
               name="recipientPhone"
               label="Telefon"
               placeholder="+45 12 34 56 78"
-              hint="Paakraevet ved sms-invitation."
+              hint="Påkrævet ved sms-invitation."
             />
 
             <fieldset className="grid gap-3">
@@ -229,10 +229,10 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
           </form>
         </Card>
 
-        <Card title="Batch-upload fra Excel" eyebrow="Gruppeopsaetning" className="space-y-4">
+        <Card title="Batch-upload fra Excel" eyebrow="Gruppeopsætning" className="space-y-4">
           <p className="text-sm leading-7 text-muted-foreground">
-            Upload en deltagerliste i Excel-format. Systemet laeser kun kolonnerne
-            <strong> Fulde navn</strong> og <strong>E-mailadresse</strong> og ignorerer alt andet.
+            Upload en deltagerliste i Excel-format. Systemet læser kun kolonnerne
+            <strong> Fulde navn</strong> og <strong> E-mailadresse</strong> og ignorerer alt andet.
           </p>
           <form action={createBatchInvitationsAction} className="grid gap-4">
             <label className="grid gap-2">
@@ -246,7 +246,7 @@ export default async function InvitationsPage({ searchParams }: InvitationsPageP
             </label>
             <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
               <li>Kun navn og e-mail bliver gemt og brugt til invitationerne.</li>
-              <li>Tomme raekker, dubletter og raekker uden gyldig e-mail bliver ignoreret.</li>
+              <li>Tomme rækker, dubletter og rækker uden gyldig e-mail bliver ignoreret.</li>
               <li>Batch-upload sender invitationerne som e-mail med det samme.</li>
             </ul>
             <Button type="submit" size="lg">

@@ -25,7 +25,7 @@ const columns = [
 ];
 
 const hardestQuestionColumns = [
-  { key: "question", label: "Sporgsmaal" },
+  { key: "question", label: "Spørgsmål" },
   { key: "wrong", label: "Forkerte", align: "right" as const },
   { key: "rate", label: "Fejlrate", align: "right" as const },
 ];
@@ -61,8 +61,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       <div className="slide-grid space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="Rapporter"
-          title="INGEN AKTIV PROEVE"
-          description="Der findes endnu ingen aktiv proeve at rapportere paa."
+          title="INGEN AKTIV PRØVE"
+          description="Der findes endnu ingen aktiv prøve at rapportere på."
         />
       </div>
     );
@@ -85,7 +85,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       <div className="space-y-1">
         <p className="font-bold">{formatStatus(attempt.status)}</p>
         <p className="text-xs text-muted-foreground">
-          {attempt.passed === null ? "Ikke afsluttet" : attempt.passed ? "Bestaaet" : "Ikke bestaaet"}
+          {attempt.passed === null ? "Ikke afsluttet" : attempt.passed ? "Bestået" : "Ikke bestået"}
         </p>
       </div>
     ),
@@ -95,7 +95,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const hardestQuestionRows = snapshot.hardestQuestions.map((question) => ({
     question: (
       <div className="space-y-1">
-        <p className="font-bold">Sporgsmaal {question.position}</p>
+        <p className="font-bold">Spørgsmål {question.position}</p>
         <p className="text-sm text-muted-foreground">{question.questionText}</p>
       </div>
     ),
@@ -120,7 +120,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       <PageHeader
         eyebrow="Rapporter"
         title="RESULTATER OG OVERBLIK"
-        description="Brug denne side til hurtigt at se, hvem der er faerdige, hvem der stadig er i gang, og hvilke spoergsmaal der oftest giver problemer."
+        description="Brug denne side til hurtigt at se, hvem der er færdige, hvem der stadig er i gang, og hvilke spørgsmål der oftest giver problemer."
         actions={
           <div className="flex flex-wrap gap-3">
             <Button
@@ -130,7 +130,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               Eksporter CSV
             </Button>
             <Button href="/admin/status" variant="secondary" size="lg">
-              Aabn status
+              Åbn status
             </Button>
             <form action={logoutAdminAction}>
               <Button type="submit" variant="secondary" size="lg">
@@ -146,7 +146,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           <TextInput
             id="reports-query"
             name="query"
-            label="Soeg"
+            label="Søg"
             defaultValue={snapshot.filters.query}
             placeholder="Navn, e-mail eller telefon"
           />
@@ -159,8 +159,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               className="min-h-12 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 text-base text-foreground focus-visible:outline-none"
             >
               <option value="all">Alle</option>
-              <option value="passed">Bestaaet</option>
-              <option value="failed">Ikke bestaaet</option>
+              <option value="passed">Bestået</option>
+              <option value="failed">Ikke bestået</option>
             </select>
           </label>
 
@@ -190,17 +190,17 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       </Card>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        <AdminStatCard label="Forsoeg" value={String(snapshot.stats.totalAttempts)} />
-        <AdminStatCard label="Faerdige" value={String(snapshot.stats.completedAttempts)} />
+        <AdminStatCard label="Forsøg" value={String(snapshot.stats.totalAttempts)} />
+        <AdminStatCard label="Færdige" value={String(snapshot.stats.completedAttempts)} />
         <AdminStatCard
-          label="Bestaaet %"
+          label="Bestået %"
           value={snapshot.stats.passRate === null ? "Afventer" : `${Math.round(snapshot.stats.passRate)}%`}
         />
         <AdminStatCard
           label="Gennemsnit"
           value={snapshot.stats.averageScore === null ? "Afventer" : `${Math.round(snapshot.stats.averageScore)}%`}
         />
-        <AdminStatCard label="Bestaaet" value={String(snapshot.stats.passedAttempts)} />
+        <AdminStatCard label="Bestået" value={String(snapshot.stats.passedAttempts)} />
         <AdminStatCard label="Auto" value={String(snapshot.stats.autoSubmittedAttempts)} />
       </section>
 
@@ -209,20 +209,20 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           caption="Resultatoversigt"
           columns={columns}
           rows={rows}
-          emptyMessage="Ingen forsoeg matcher det valgte filter."
+          emptyMessage="Ingen forsøg matcher det valgte filter."
         />
 
-        <Card title="Spoergsmaal der driller" eyebrow="Laeringsmoenstre" className="space-y-4">
+        <Card title="Spørgsmål der driller" eyebrow="Læringsmønstre" className="space-y-4">
           <p className="text-sm leading-6 text-muted-foreground">
-            Listen er baseret paa afleverede forsoeg og viser de spoergsmaal, som oftest bliver
-            besvaret forkert. Brug den til hurtigt at se, hvor undervisningen eller spoergsmaalene
+            Listen er baseret på afleverede forsøg og viser de spørgsmål, som oftest bliver
+            besvaret forkert. Brug den til hurtigt at se, hvor undervisningen eller spørgsmålene
             skal justeres.
           </p>
           <AdminTable
-            caption="Spoergsmaal der driller"
+            caption="Spørgsmål der driller"
             columns={hardestQuestionColumns}
             rows={hardestQuestionRows}
-            emptyMessage="Der er endnu ikke nok afleverede forsoeg til at vise moenstre."
+            emptyMessage="Der er endnu ikke nok afleverede forsøg til at vise mønstre."
           />
         </Card>
       </section>
