@@ -134,7 +134,6 @@ export async function getParticipantSession() {
   const session = decodeSession(rawCookie);
 
   if (!session || session.expiresAt <= Date.now()) {
-    cookieStore.delete(PARTICIPANT_SESSION_COOKIE);
     return null;
   }
 

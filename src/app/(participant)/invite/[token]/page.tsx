@@ -1,79 +1,68 @@
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { resolveInvitationLink } from "@/lib/invitations/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function InvitationEntryPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ state?: string }>;
 }) {
   const { token } = await params;
-  const resolution = await resolveInvitationLink(token);
+  const { state } = await searchParams;
 
-  if (resolution.state === "invalid" || resolution.state === "expired") {
+  if (state === "invalid" || state === "expired") {
     return (
       <section className="participant-hero participant-surface mt-2">
         <div className="space-y-4">
           <p className="kicker">Invitation</p>
           <h1 className="participant-title">
-            {resolution.state === "expired" ? "Linket er udløbet" : "Linket blev ikke fundet"}
+            {state === "expired" ? "Linket er udlobet" : "Linket blev ikke fundet"}
           </h1>
           <p className="participant-lead">
-            Kontakt underviseren, hvis du skal have et nyt prøvelink.
+            Kontakt underviseren, hvis du skal have et nyt provelink.
           </p>
         </div>
         <div className="participant-meta-card space-y-3">
-          <p className="participant-meta-label">Næste skridt</p>
+          <p className="participant-meta-label">Naeste skridt</p>
           <p className="text-base leading-7 text-muted-foreground">
-            Invitationen kan være udløbet, slettet eller tastet forkert ind.
+            Invitationen kan vaere udlobet, slettet eller tastet forkert ind.
           </p>
         </div>
         <Button href="/" size="lg">
-          Gå til forsiden
+          Ga til forsiden
         </Button>
       </section>
     );
   }
 
-  if (resolution.state === "redirect_result") {
-    redirect(`/result/${resolution.attemptId}`);
+  if (state !== "locked") {
+    redirect(`/invite/${token}/open` as never);
   }
-
-  if (resolution.state === "redirect_exam") {
-    redirect(`/exam/${resolution.attemptId}`);
-  }
-
-  if (resolution.state !== "locked") {
-    redirect("/");
-  }
-
-  const invitation = resolution.invitation;
 
   return (
     <section className="participant-hero participant-surface mt-2">
       <div className="space-y-4">
-        <p className="kicker">Invitation til prøve</p>
-        <h1 className="participant-title">Prøven er allerede åben</h1>
+        <p className="kicker">Invitation til prove</p>
+        <h1 className="participant-title">Proven er allerede aben</h1>
         <p className="participant-lead">
-          {invitation.recipientName
-            ? `${invitation.recipientName}, din prøve i ${invitation.examTitle} er allerede aktiv på en anden enhed.`
-            : `Din prøve i ${invitation.examTitle} er allerede aktiv på en anden enhed.`}
+          Din prove er allerede aktiv pa en anden enhed.
         </p>
       </div>
 
       <div className="participant-meta-card space-y-3">
         <p className="participant-meta-label">Det skal du vide</p>
         <p className="text-base leading-7 text-muted-foreground">
-          Af hensyn til eksamensintegritet tillades kun én aktiv deltager-session ad gangen.
-          Fortsæt på den enhed, hvor linket først blev åbnet, eller vent til sessionen udløber.
+          Af hensyn til eksamensintegritet tillades kun en aktiv deltager-session ad gangen.
+          Fortsaet pa den enhed, hvor linket forst blev abnet, eller vent til sessionen udlober.
         </p>
       </div>
 
       <Button href="/" size="lg">
-        Gå til forsiden
+        Ga til forsiden
       </Button>
     </section>
   );
