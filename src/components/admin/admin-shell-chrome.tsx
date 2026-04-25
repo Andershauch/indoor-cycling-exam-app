@@ -36,6 +36,7 @@ export function AdminShellChrome({
 }: AdminShellChromeProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isSuperAdmin = role === AdminRole.SUPER_ADMIN;
 
   const sections = adminNavigationSections
     .map((section) => ({
@@ -55,14 +56,14 @@ export function AdminShellChrome({
           <BrandLogo size="sm" />
           <div className="min-w-0 flex-1">
             <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-              Admin
+              {isSuperAdmin ? "Admin" : "Instruktør"}
             </p>
             <p className="truncate text-sm font-bold text-foreground">{name}</p>
             <p className="mt-1 truncate text-xs text-muted-foreground">{email}</p>
           </div>
         </div>
         <div className="mt-3 inline-flex rounded-full border border-border-soft bg-surface px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-          {role === AdminRole.SUPER_ADMIN ? "Superadmin" : "Admin"}
+          {isSuperAdmin ? "Superadmin" : "Instruktør"}
         </div>
       </div>
 
@@ -112,13 +113,18 @@ export function AdminShellChrome({
 
   return (
     <div className="min-h-screen">
-      <div className="sticky top-0 z-30 border-b border-border-soft bg-background/90 backdrop-blur lg:hidden">
+      <div
+        className={cn(
+          "sticky top-0 z-30 border-b border-border-soft bg-background/90 backdrop-blur",
+          isSuperAdmin ? "lg:hidden" : "",
+        )}
+      >
         <div className="slide-grid flex items-center justify-between gap-4 py-4">
           <Link href="/admin" className="flex items-center gap-3">
             <BrandLogo size="sm" />
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Admin
+                {isSuperAdmin ? "Admin" : "Instruktør"}
               </p>
               <p className="text-sm font-bold text-foreground">
                 {activeItem?.label ?? "Indoor Cycling"}
@@ -137,7 +143,7 @@ export function AdminShellChrome({
       </div>
 
       {isMenuOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className={cn("fixed inset-0 z-50", isSuperAdmin ? "lg:hidden" : "")}>
           <button
             type="button"
             className="absolute inset-0 bg-black/35"
@@ -163,8 +169,13 @@ export function AdminShellChrome({
         </div>
       ) : null}
 
-      <div className="slide-grid py-6 sm:py-8 lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:gap-7 lg:py-8">
-        <aside className="sticky top-6 hidden self-start lg:block">
+      <div
+        className={cn(
+          "slide-grid py-6 sm:py-8 lg:py-8",
+          isSuperAdmin ? "lg:grid lg:grid-cols-[15.5rem_minmax(0,1fr)] lg:gap-7" : "",
+        )}
+      >
+        <aside className={cn("sticky top-6 hidden self-start", isSuperAdmin ? "lg:block" : "")}>
           <div className="rounded-[1.5rem] border border-border-soft bg-background-muted/75 p-3.5 shadow-[0_12px_30px_rgba(17,17,17,0.08)] backdrop-blur-sm">
             {navContent}
           </div>

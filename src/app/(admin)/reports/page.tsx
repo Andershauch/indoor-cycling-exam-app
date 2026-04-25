@@ -1,8 +1,10 @@
+import { AdminRole } from "@prisma/client";
 import { AdminStatCard } from "@/components/admin/admin-stat-card";
 import { Button } from "@/components/ui/button";
 import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { requireAdminSession } from "@/lib/admin/auth";
 import { TextInput } from "@/components/ui/text-input";
 import { getAdminReportsSnapshot } from "@/lib/admin/data";
 
@@ -52,6 +54,7 @@ function formatStatus(status: string) {
 }
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
   const filters = await searchParams;
   const snapshot = await getAdminReportsSnapshot(filters);
 

@@ -383,6 +383,68 @@ svg {
   overflow-x: auto;
 }
 
+.instructor-flow {
+  width: min(100%, 72rem);
+  margin-inline: auto;
+}
+
+.instructor-step-nav {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-block: var(--space-1) var(--space-2);
+  scroll-padding-inline: var(--space-4);
+}
+
+.instructor-step-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 253, 244, 0.78);
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.instructor-step-chip span {
+  display: inline-flex;
+  width: 1.55rem;
+  height: 1.55rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-contrast);
+  color: var(--color-text-inverse);
+  font-size: var(--text-xs);
+}
+
+.instructor-snap-row {
+  display: grid;
+  grid-auto-columns: minmax(0, 92%);
+  grid-auto-flow: column;
+  gap: var(--space-4);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: var(--space-1) var(--space-1) var(--space-5);
+  scroll-padding-inline: var(--space-1);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.instructor-panel {
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-margin-inline-start: var(--space-1);
+}
+
+.instructor-panel > section {
+  min-height: min(44rem, calc(100vh - 10rem));
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -402,5 +464,15 @@ svg {
 
   .participant-hero {
     padding: var(--space-8);
+  }
+
+  .instructor-snap-row {
+    grid-auto-columns: minmax(0, 30rem);
+  }
+}
+
+@media (min-width: 1180px) {
+  .instructor-snap-row {
+    grid-auto-columns: minmax(0, 33%);
   }
 }

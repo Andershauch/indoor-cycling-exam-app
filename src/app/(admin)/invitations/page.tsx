@@ -1,3 +1,4 @@
+import { AdminRole } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import {
   createBatchInvitationsAction,
   createInvitationAction,
 } from "@/lib/admin/actions";
+import { requireAdminSession } from "@/lib/admin/auth";
 import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +63,7 @@ function formatStatus(status: string) {
 }
 
 export default async function InvitationsPage({ searchParams }: InvitationsPageProps) {
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
   const [params, snapshot] = await Promise.all([searchParams, getAdminInvitationsSnapshot()]);
 
   if (!snapshot) {
