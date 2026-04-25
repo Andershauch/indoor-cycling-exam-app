@@ -1,7 +1,9 @@
+import { AdminRole } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { AdminTable } from "@/components/ui/admin-table";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { requireAdminSession } from "@/lib/admin/auth";
 import { getAdminDashboardSnapshot, getAdminReportsSnapshot } from "@/lib/admin/data";
 import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
@@ -103,6 +105,7 @@ function formatAuditAction(action: string) {
 }
 
 export default async function AdminStatusPage() {
+  await requireAdminSession(AdminRole.SUPER_ADMIN);
   const [dashboard, invitationSnapshot, reports] = await Promise.all([
     getAdminDashboardSnapshot(),
     getAdminInvitationsSnapshot(),

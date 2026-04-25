@@ -25,17 +25,17 @@ export const adminNavigationSections: AdminNavigationSection[] = [
   {
     label: "Før prøven",
     items: [
-      { href: "/admin", label: "Overblik" },
-      { href: "/invitations", label: "Invitationer" },
+      { href: "/admin", label: "Afhold prøve" },
+      { href: "/invitations", label: "Invitationer", roles: [AdminRole.SUPER_ADMIN] },
     ],
   },
   {
     label: "Under prøven",
-    items: [{ href: "/admin/status", label: "Status" }],
+    items: [{ href: "/admin/status", label: "Status", roles: [AdminRole.SUPER_ADMIN] }],
   },
   {
     label: "Efter prøven",
-    items: [{ href: "/reports", label: "Rapporter" }],
+    items: [{ href: "/reports", label: "Rapporter", roles: [AdminRole.SUPER_ADMIN] }],
   },
   {
     label: "System",

@@ -21,6 +21,31 @@ import { getPrismaClient } from "@/lib/db/prisma";
 import { createAndDispatchInvitation } from "@/lib/invitations/service";
 
 const ADMINS_ROUTE = "/admins" as Parameters<typeof redirect>[0];
+type RedirectTarget = Parameters<typeof redirect>[0];
+
+function getReturnTo(formData: FormData, fallback = "/invitations"): RedirectTarget {
+  const returnTo = String(formData.get("returnTo") ?? "").trim();
+
+  if (!returnTo.startsWith("/admin")) {
+    return fallback as RedirectTarget;
+  }
+
+  return returnTo as RedirectTarget;
+}
+
+function appendRedirectParams(path: RedirectTarget, params: Record<string, string>): RedirectTarget {
+  const [pathAndQuery, hash = ""] = path.split("#");
+  const [pathname, query = ""] = pathAndQuery.split("?");
+  const searchParams = new URLSearchParams(query);
+
+  Object.entries(params).forEach(([key, value]) => {
+    searchParams.set(key, value);
+  });
+
+  const queryString = searchParams.toString();
+
+  return `${pathname}${queryString ? `?${queryString}` : ""}${hash ? `#${hash}` : ""}` as RedirectTarget;
+}
 
 async function logAdminAction(input: {
   adminUserId?: string | null;
@@ -576,6 +601,7 @@ export async function moveQuestionAction(formData: FormData) {
 
 export async function createInvitationAction(formData: FormData) {
   const session = await requireAdminSession();
+  const returnTo = getReturnTo(formData);
   const prisma = getPrismaClient();
   const examSet = await prisma.examSet.findFirst({
     where: {
@@ -623,9 +649,9 @@ export async function createInvitationAction(formData: FormData) {
       error instanceof Error ? error.message : "Invitationen kunne ikke oprettes.";
 
     redirect(
-      `/invitations?${new URLSearchParams({
+      appendRedirectParams(returnTo, {
         createError: message,
-      }).toString()}`,
+      }),
     );
   }
 
@@ -641,16 +667,18 @@ export async function createInvitationAction(formData: FormData) {
   });
 
   revalidatePath("/invitations");
+  revalidatePath("/admin");
   redirect(
-    `/invitations?${new URLSearchParams({
+    appendRedirectParams(returnTo, {
       createOk: "1",
       recipient: recipientEmail || recipientPhone || recipientName || "Deltager",
-    }).toString()}`,
+    }),
   );
 }
 
 export async function createBatchInvitationsAction(formData: FormData) {
   const session = await requireAdminSession();
+  const returnTo = getReturnTo(formData);
   const prisma = getPrismaClient();
   const examSet = await prisma.examSet.findFirst({
     where: {
@@ -662,13 +690,13 @@ export async function createBatchInvitationsAction(formData: FormData) {
   });
 
   if (!examSet) {
-    redirect(`/invitations?${new URLSearchParams({ batchError: "Ingen aktiv prøve" }).toString()}`);
+    redirect(appendRedirectParams(returnTo, { batchError: "Ingen aktiv prøve" }));
   }
 
   const upload = formData.get("batchFile");
 
   if (!(upload instanceof File) || upload.size === 0) {
-    redirect(`/invitations?${new URLSearchParams({ batchError: "Vælg en Excel-fil" }).toString()}`);
+    redirect(appendRedirectParams(returnTo, { batchError: "Vælg en Excel-fil" }));
   }
 
   const adminUser = await prisma.adminUser.findUnique({
@@ -685,7 +713,9 @@ export async function createBatchInvitationsAction(formData: FormData) {
 
     if (parsed.entries.length === 0) {
       redirect(
-        `/invitations?${new URLSearchParams({ batchError: "Ingen gyldige deltagere fundet i filen" }).toString()}`,
+        appendRedirectParams(returnTo, {
+          batchError: "Ingen gyldige deltagere fundet i filen",
+        }),
       );
     }
 
@@ -723,12 +753,14 @@ export async function createBatchInvitationsAction(formData: FormData) {
 
     revalidatePath("/admin");
     revalidatePath("/invitations");
-    redirect(`/invitations?${new URLSearchParams({
-      batchOk: "1",
-      created: String(createdCount),
-      failed: String(failedCount),
-      ignored: String(parsed.ignoredRowCount),
-    }).toString()}`);
+    redirect(
+      appendRedirectParams(returnTo, {
+        batchOk: "1",
+        created: String(createdCount),
+        failed: String(failedCount),
+        ignored: String(parsed.ignoredRowCount),
+      }),
+    );
   } catch (error) {
     if (
       typeof error === "object" &&
@@ -743,6 +775,6 @@ export async function createBatchInvitationsAction(formData: FormData) {
     const message =
       error instanceof Error ? error.message : "Excel-filen kunne ikke behandles";
 
-    redirect(`/invitations?${new URLSearchParams({ batchError: message }).toString()}`);
+    redirect(appendRedirectParams(returnTo, { batchError: message }));
   }
 }

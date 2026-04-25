@@ -1,3 +1,5 @@
+import { AdminRole } from "@prisma/client";
+import { InstructorExamFlow } from "@/components/admin/instructor-exam-flow";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TextInput } from "@/components/ui/text-input";
@@ -5,7 +7,9 @@ import {
   createBatchInvitationsAction,
   createInvitationAction,
 } from "@/lib/admin/actions";
-import { getAdminDashboardSnapshot } from "@/lib/admin/data";
+import { requireAdminSession } from "@/lib/admin/auth";
+import { getAdminDashboardSnapshot, getAdminReportsSnapshot } from "@/lib/admin/data";
+import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +20,51 @@ type AdminPageProps = {
     created?: string;
     failed?: string;
     ignored?: string;
+    createOk?: string;
+    createError?: string;
+    recipient?: string;
   }>;
 };
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
-  const [params, dashboard] = await Promise.all([searchParams, getAdminDashboardSnapshot()]);
+  const session = await requireAdminSession();
+  const params = await searchParams;
+
+  if (session.role !== AdminRole.SUPER_ADMIN) {
+    const [dashboard, invitationSnapshot, reports] = await Promise.all([
+      getAdminDashboardSnapshot(),
+      getAdminInvitationsSnapshot(),
+      getAdminReportsSnapshot(),
+    ]);
+
+    if (!dashboard || !invitationSnapshot || !reports) {
+      return (
+        <div className="space-y-6 py-6 sm:py-8 lg:py-8">
+          <Card tone="strong" className="space-y-4 p-6 sm:p-7">
+            <p className="kicker">Instruktørflow</p>
+            <h1 className="font-display text-[clamp(2.35rem,4.4vw,3.4rem)] leading-[0.96] uppercase tracking-[-0.04em]">
+              Ingen aktiv prøve
+            </h1>
+            <p className="content-copy text-base">
+              En superadmin skal først gøre en prøve aktiv. Derefter kan du uploade deltagere,
+              starte afviklingen og følge resultaterne her.
+            </p>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <InstructorExamFlow
+        dashboard={dashboard}
+        invitations={invitationSnapshot}
+        reports={reports}
+        params={params}
+      />
+    );
+  }
+
+  const dashboard = await getAdminDashboardSnapshot();
 
   if (!dashboard) {
     return (
