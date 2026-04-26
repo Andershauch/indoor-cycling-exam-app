@@ -384,7 +384,7 @@ svg {
 }
 
 .instructor-flow {
-  width: min(100%, 72rem);
+  width: 100%;
   margin-inline: auto;
 }
 
@@ -423,9 +423,7 @@ svg {
 }
 
 .instructor-snap-row {
-  display: grid;
-  grid-auto-columns: minmax(0, 92%);
-  grid-auto-flow: column;
+  display: flex;
   gap: var(--space-4);
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -436,13 +434,16 @@ svg {
 }
 
 .instructor-panel {
+  flex: 0 0 100%;
   min-width: 0;
   scroll-snap-align: start;
   scroll-margin-inline-start: var(--space-1);
 }
 
+.instructor-panel > .surface-card,
+.instructor-panel > .surface-card-strong,
 .instructor-panel > section {
-  min-height: min(44rem, calc(100vh - 10rem));
+  min-height: min(46rem, calc(100svh - 12rem));
 }
 
 .sr-only {
@@ -466,13 +467,10 @@ svg {
     padding: var(--space-8);
   }
 
-  .instructor-snap-row {
-    grid-auto-columns: minmax(0, 30rem);
-  }
 }
 
 @media (min-width: 1180px) {
-  .instructor-snap-row {
-    grid-auto-columns: minmax(0, 33%);
+  .instructor-flow {
+    width: min(100%, 58rem);
   }
 }

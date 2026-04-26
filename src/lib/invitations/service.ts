@@ -65,6 +65,7 @@ async function createFreshParticipantSession(invitationId: string) {
 
 export async function createAndDispatchInvitation(input: {
   examSetId: string;
+  examSessionId?: string | null;
   createdByAdminId?: string | null;
   channel: InvitationChannel;
   recipientName?: string | null;
@@ -97,6 +98,7 @@ export async function createAndDispatchInvitation(input: {
   const invitation = await prisma.invitation.create({
     data: {
       examSetId: examSet.id,
+      examSessionId: input.examSessionId ?? null,
       createdByAdminId: input.createdByAdminId ?? null,
       channel: input.channel,
       status: InvitationStatus.CREATED,
@@ -135,14 +137,26 @@ export async function createAndDispatchInvitation(input: {
   };
 }
 
-export async function getAdminInvitationsSnapshot() {
+export async function getAdminInvitationsSnapshot(input: {
+  examSessionId?: string | null;
+} = {}) {
   const prisma = getPrismaClient();
   const examSet = await prisma.examSet.findFirst({
     where: {
       isActive: true,
+      ...(input.examSessionId
+        ? {
+            examSessions: {
+              some: {
+                id: input.examSessionId,
+              },
+            },
+          }
+        : {}),
     },
     include: {
       invitations: {
+        where: input.examSessionId ? { examSessionId: input.examSessionId } : undefined,
         orderBy: {
           createdAt: "desc",
         },
@@ -169,6 +183,7 @@ export async function getAdminInvitationsSnapshot() {
     },
     invitations: examSet.invitations.map((invitation) => ({
       id: invitation.id,
+      examSessionId: invitation.examSessionId,
       channel: invitation.channel,
       status: invitation.status,
       token: invitation.token,
@@ -332,6 +347,7 @@ export async function resolveInvitationLink(token: string) {
 
   const attempt = await createAttempt({
     examSetId: invitation.examSetId,
+    examSessionId: invitation.examSessionId,
     invitationId: invitation.id,
     participantName: invitation.recipientName,
     participantEmail: invitation.recipientEmail,

@@ -8,6 +8,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const csv = await buildAdminReportsCsv({
+    examSessionId: searchParams.get("examSessionId") ?? undefined,
     query: searchParams.get("query") ?? undefined,
     outcome:
       (searchParams.get("outcome") as "all" | "passed" | "failed" | null) ?? undefined,

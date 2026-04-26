@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TextInput } from "@/components/ui/text-input";
 import {
+  closeExamSessionAction,
   createBatchInvitationsAction,
   createInvitationAction,
 } from "@/lib/admin/actions";
@@ -16,12 +17,21 @@ type InstructorExamFlowProps = {
   dashboard: DashboardSnapshot;
   invitations: InvitationSnapshot;
   reports: ReportsSnapshot;
+  examSession?: {
+    id: string;
+    title: string;
+    status: string;
+    closedAt: Date | null;
+  } | null;
+  basePath?: string;
   params: {
     batchOk?: string;
     batchError?: string;
     created?: string;
     failed?: string;
     ignored?: string;
+    closed?: string;
+    closeError?: string;
     createOk?: string;
     createError?: string;
     recipient?: string;
@@ -89,8 +99,15 @@ export function InstructorExamFlow({
   dashboard,
   invitations,
   reports,
+  examSession,
+  basePath = "/admin",
   params,
 }: InstructorExamFlowProps) {
+  const returnTo = examSession ? `${basePath}#deltagere` : "/admin#deltagere";
+  const resultReturnTo = examSession
+    ? `${basePath}#resultater`
+    : "/admin#resultater";
+  const isClosed = examSession?.status === "CLOSED";
   const completedAttempts = reports.attempts.filter(
     (attempt) => attempt.status === "SUBMITTED" || attempt.status === "AUTO_SUBMITTED",
   );
@@ -106,11 +123,12 @@ export function InstructorExamFlow({
         <div className="space-y-2">
           <p className="kicker">Instruktørflow</p>
           <h1 className="font-display text-[clamp(2.35rem,12vw,4.7rem)] leading-[0.9] uppercase tracking-[-0.055em]">
-            Afhold prøven
+            {isClosed ? "Prøven er afsluttet" : "Afhold prøven"}
           </h1>
           <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-            Swipe mellem trinene. Alt det praktiske til afviklingen ligger her, så du kan styre
-            prøven fra mobilen.
+            {examSession
+              ? `Swipe mellem trinene for ${examSession.title}. Alt det praktiske til afviklingen ligger her.`
+              : "Swipe mellem trinene. Alt det praktiske til afviklingen ligger her, så du kan styre prøven fra mobilen."}
           </p>
         </div>
 
@@ -136,17 +154,18 @@ export function InstructorExamFlow({
                 Du er inde
               </h2>
               <p className="text-base leading-7 text-muted-foreground">
-                Magic linket giver dig adgang til den aktive prøve. Herfra skal du først gøre
-                deltagerlisten klar.
+                {isClosed
+                  ? "Afholdelsen er lukket. Du kan stadig se status og resultater."
+                  : "Magic linket giver dig adgang til den aktive prøve. Herfra skal du først gøre deltagerlisten klar."}
               </p>
             </div>
             <div className="grid gap-3">
-              <StatPill label="Aktiv prøve" value={dashboard.exam.title} />
+              <StatPill label={examSession ? "Afholdelse" : "Aktiv prøve"} value={examSession?.title ?? dashboard.exam.title} />
               <StatPill label="Spørgsmål" value={String(dashboard.exam.questionCount)} />
               <StatPill label="Tid" value={`${dashboard.exam.timeLimitMinutes} min`} />
             </div>
             <Button href="#deltagere" size="lg" className="w-full">
-              Tilføj deltagere
+              {isClosed ? "Se deltagere" : "Tilføj deltagere"}
             </Button>
           </Card>
         </section>
@@ -178,17 +197,21 @@ export function InstructorExamFlow({
             ) : null}
 
             <form action={createBatchInvitationsAction} className="grid gap-4">
-              <input type="hidden" name="returnTo" value="/admin#deltagere" />
+              <input type="hidden" name="returnTo" value={returnTo} />
+              {examSession ? (
+                <input type="hidden" name="examSessionId" value={examSession.id} />
+              ) : null}
               <label className="grid gap-2">
                 <span className="text-sm font-bold uppercase tracking-[0.08em]">Excel-fil</span>
                 <input
                   type="file"
                   name="batchFile"
                   accept=".xlsx,.xls"
+                  disabled={isClosed}
                   className="min-h-14 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 py-3 text-base text-foreground focus-visible:outline-none"
                 />
               </label>
-              <Button type="submit" size="lg" className="w-full">
+              <Button type="submit" size="lg" className="w-full" disabled={isClosed}>
                 Upload og send links
               </Button>
             </form>
@@ -205,13 +228,17 @@ export function InstructorExamFlow({
                 </div>
               ) : null}
               <form action={createInvitationAction} className="grid gap-4">
-                <input type="hidden" name="returnTo" value="/admin#deltagere" />
+                <input type="hidden" name="returnTo" value={returnTo} />
+                {examSession ? (
+                  <input type="hidden" name="examSessionId" value={examSession.id} />
+                ) : null}
                 <input type="hidden" name="channel" value="EMAIL" />
                 <TextInput
                   id="instructor-recipient-name"
                   name="recipientName"
                   label="Tilføj enkelt deltager"
                   placeholder="Navn"
+                  disabled={isClosed}
                 />
                 <TextInput
                   id="instructor-recipient-email"
@@ -219,11 +246,23 @@ export function InstructorExamFlow({
                   label="E-mail"
                   type="email"
                   placeholder="navn@example.com"
+                  disabled={isClosed}
                 />
-                <Button type="submit" variant="secondary" size="lg" className="w-full">
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  size="lg"
+                  className="w-full"
+                  disabled={isClosed}
+                >
                   Send link
                 </Button>
               </form>
+              {isClosed ? (
+                <p className="mt-4 rounded-[1rem] border border-border-soft bg-surface p-4 text-sm leading-6 text-muted-foreground">
+                  Afholdelsen er afsluttet, så deltagerlisten er låst.
+                </p>
+              ) : null}
             </div>
           </Card>
         </section>
@@ -372,9 +411,45 @@ export function InstructorExamFlow({
                 ))
               )}
             </div>
+            {params.closed ? (
+              <p className="rounded-[1rem] border border-border-soft bg-success/10 p-4 text-sm leading-6">
+                Afholdelsen er afsluttet og indgår nu i rapporteringen.
+              </p>
+            ) : null}
+            {params.closeError ? (
+              <p className="rounded-[1rem] border border-danger/30 bg-danger/10 p-4 text-sm font-bold text-danger">
+                {params.closeError}
+              </p>
+            ) : null}
             <Button href="/reports/export" variant="secondary" size="lg" className="w-full">
               Eksporter CSV
             </Button>
+            {examSession ? (
+              isClosed ? (
+                <p className="rounded-[1rem] border border-border-soft bg-surface p-4 text-sm leading-6 text-muted-foreground">
+                  Afsluttet {formatDate(examSession.closedAt)}.
+                </p>
+              ) : (
+                <form action={closeExamSessionAction} className="grid gap-3">
+                  <input type="hidden" name="examSessionId" value={examSession.id} />
+                  <input type="hidden" name="returnTo" value={resultReturnTo} />
+                  <Button
+                    type="submit"
+                    variant="contrast"
+                    size="lg"
+                    className="w-full"
+                    disabled={activeAttempts.length > 0}
+                  >
+                    Afslut prøve
+                  </Button>
+                  {activeAttempts.length > 0 ? (
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      Afholdelsen kan afsluttes, når ingen deltagere er i gang.
+                    </p>
+                  ) : null}
+                </form>
+              )
+            ) : null}
           </Card>
         </section>
       </div>

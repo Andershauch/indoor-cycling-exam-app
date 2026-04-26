@@ -3,12 +3,13 @@ import { InstructorExamFlow } from "@/components/admin/instructor-exam-flow";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TextInput } from "@/components/ui/text-input";
-import {
-  createBatchInvitationsAction,
-  createInvitationAction,
-} from "@/lib/admin/actions";
+import { createExamSessionAction } from "@/lib/admin/actions";
 import { requireAdminSession } from "@/lib/admin/auth";
-import { getAdminDashboardSnapshot, getAdminReportsSnapshot } from "@/lib/admin/data";
+import {
+  getAdminDashboardSnapshot,
+  getAdminReportsSnapshot,
+  getExamSessionAdminSnapshot,
+} from "@/lib/admin/data";
 import { getAdminInvitationsSnapshot } from "@/lib/invitations/service";
 
 export const dynamic = "force-dynamic";
@@ -20,28 +21,273 @@ type AdminPageProps = {
     created?: string;
     failed?: string;
     ignored?: string;
+    closed?: string;
+    closeError?: string;
     createOk?: string;
     createError?: string;
     recipient?: string;
+    view?: string;
+    session?: string;
   }>;
 };
+
+function formatDate(value: Date | null) {
+  if (!value) {
+    return "Ikke sat";
+  }
+
+  return new Intl.DateTimeFormat("da-DK", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(value);
+}
+
+function formatSessionStatus(status: string) {
+  switch (status) {
+    case "ACTIVE":
+      return "Aktiv";
+    case "CLOSED":
+      return "Afsluttet";
+    default:
+      return "Kladde";
+  }
+}
+
+type ExamSessionSnapshot = Awaited<ReturnType<typeof getExamSessionAdminSnapshot>>;
+type ExamSessionListItem = ExamSessionSnapshot["sessions"][number];
+
+function getSessionHref(examSessionId: string, isSuperAdminPreview: boolean) {
+  return isSuperAdminPreview
+    ? `/admin?view=instructor&session=${examSessionId}`
+    : `/admin?session=${examSessionId}`;
+}
+
+function ExamSessionCreateCard({
+  examSets,
+  isSuperAdminPreview,
+}: {
+  examSets: ExamSessionSnapshot["examSets"];
+  isSuperAdminPreview: boolean;
+}) {
+  const hasExamFormats = examSets.length > 0;
+
+  return (
+    <Card
+      title="Ny prøveafholdelse"
+      eyebrow="Start her"
+      titleClassName="text-[clamp(1.55rem,6vw,2.2rem)] leading-[1] tracking-[-0.02em]"
+      className="space-y-4"
+    >
+      <form action={createExamSessionAction} className="grid gap-4">
+        {isSuperAdminPreview ? <input type="hidden" name="view" value="instructor" /> : null}
+        <label className="grid gap-2">
+          <span className="text-sm font-bold uppercase tracking-[0.08em]">Prøveformat</span>
+          <select
+            name="examSetId"
+            className="min-h-12 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 text-base text-foreground focus-visible:outline-none"
+            required
+            disabled={!hasExamFormats}
+          >
+            {examSets.map((examSet) => (
+              <option key={examSet.id} value={examSet.id}>
+                {examSet.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <TextInput
+          id="exam-session-title"
+          name="title"
+          label="Navn på hold/prøve"
+          placeholder="Fx Indoor cycling, aprilholdet"
+        />
+        <TextInput
+          id="exam-session-location"
+          name="location"
+          label="Sted"
+          placeholder="Fx DGI Huset"
+        />
+        {!hasExamFormats ? (
+          <p className="text-sm leading-6 text-danger">
+            Der mangler et aktivt prøveformat. En superadmin skal oprette eller aktivere et format
+            først.
+          </p>
+        ) : null}
+        <Button type="submit" size="lg" disabled={!hasExamFormats}>
+          Opret afholdelse
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
+function ExamSessionList({
+  sessions,
+  isSuperAdminPreview,
+}: {
+  sessions: ExamSessionListItem[];
+  isSuperAdminPreview: boolean;
+}) {
+  if (sessions.length === 0) {
+    return (
+      <Card
+        title="Ingen afholdelser endnu"
+        eyebrow="Overblik"
+        titleClassName="text-[clamp(1.55rem,6vw,2.2rem)] leading-[1] tracking-[-0.02em]"
+      >
+        <p className="text-sm leading-7 text-muted-foreground">
+          Når en afholdelse er oprettet, vises den her med deltagere, status og resultater.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      title="Dine afholdelser"
+      eyebrow="Fortsæt"
+      titleClassName="text-[clamp(1.55rem,6vw,2.2rem)] leading-[1] tracking-[-0.02em]"
+      className="space-y-3"
+    >
+      {sessions.map((examSession) => (
+        <div
+          key={examSession.id}
+          className="rounded-[1rem] border border-border-soft bg-surface p-4"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-bold">{examSession.title}</p>
+                <span className="rounded-full border border-border-soft bg-white/70 px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                  {formatSessionStatus(examSession.status)}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {examSession.examSetTitle} · {formatDate(examSession.startsAt)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {examSession.invitationCount} deltagere · {examSession.completedAttemptCount}{" "}
+                afleveret ·{" "}
+                {examSession.passRate === null ? "ingen score endnu" : `${Math.round(examSession.passRate)}% bestået`}
+              </p>
+            </div>
+            <Button
+              href={getSessionHref(examSession.id, isSuperAdminPreview)}
+              size="sm"
+              variant={examSession.status === "CLOSED" ? "secondary" : "primary"}
+              className="shrink-0"
+            >
+              {examSession.status === "CLOSED" ? "Se" : "Åbn"}
+            </Button>
+          </div>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+function InstructorSessionsOverview({
+  sessionSnapshot,
+  isSuperAdminPreview,
+}: {
+  sessionSnapshot: ExamSessionSnapshot;
+  isSuperAdminPreview: boolean;
+}) {
+  const activeSessions = sessionSnapshot.sessions.filter(
+    (examSession) => examSession.status !== "CLOSED",
+  ).length;
+
+  return (
+    <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
+      {isSuperAdminPreview ? (
+        <div className="flex justify-end">
+          <Button href="/admin" variant="secondary" size="sm">
+            Tilbage til superadmin
+          </Button>
+        </div>
+      ) : null}
+
+      <Card tone="strong" className="space-y-4 p-6 sm:p-7">
+        <p className="kicker">
+          {isSuperAdminPreview ? "Preview af instruktør" : "Mine prøveafholdelser"}
+        </p>
+        <h1 className="font-display text-[clamp(2rem,9vw,3.3rem)] leading-[0.98] uppercase tracking-[-0.035em]">
+          Afholdelser
+        </h1>
+        <p className="content-copy text-base">
+          Opret et hold, tilføj deltagere og åbn den afholdelse du vil styre under prøven.
+        </p>
+      </Card>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <div className="surface-card p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.08em]">Aktive</p>
+          <p className="mt-2 font-display text-[2rem] leading-none">{activeSessions}</p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.08em]">Alle</p>
+          <p className="mt-2 font-display text-[2rem] leading-none">
+            {sessionSnapshot.sessions.length}
+          </p>
+        </div>
+        <div className="surface-card p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.08em]">Formater</p>
+          <p className="mt-2 font-display text-[2rem] leading-none">
+            {sessionSnapshot.examSets.length}
+          </p>
+        </div>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        <ExamSessionCreateCard
+          examSets={sessionSnapshot.examSets}
+          isSuperAdminPreview={isSuperAdminPreview}
+        />
+        <ExamSessionList
+          sessions={sessionSnapshot.sessions}
+          isSuperAdminPreview={isSuperAdminPreview}
+        />
+      </section>
+    </div>
+  );
+}
 
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const session = await requireAdminSession();
   const params = await searchParams;
+  const sessionSnapshot = await getExamSessionAdminSnapshot({
+    adminUserId: session.id,
+    includeAll: session.role === AdminRole.SUPER_ADMIN,
+  });
 
-  if (session.role !== AdminRole.SUPER_ADMIN) {
+  if (session.role !== AdminRole.SUPER_ADMIN || params.view === "instructor") {
+    const isSuperAdminPreview = session.role === AdminRole.SUPER_ADMIN;
+    const selectedExamSession = params.session
+      ? sessionSnapshot.sessions.find((examSession) => examSession.id === params.session) ?? null
+      : null;
+
+    if (!selectedExamSession) {
+      return (
+        <InstructorSessionsOverview
+          sessionSnapshot={sessionSnapshot}
+          isSuperAdminPreview={isSuperAdminPreview}
+        />
+      );
+    }
+
     const [dashboard, invitationSnapshot, reports] = await Promise.all([
-      getAdminDashboardSnapshot(),
-      getAdminInvitationsSnapshot(),
-      getAdminReportsSnapshot(),
+      getAdminDashboardSnapshot({ examSessionId: selectedExamSession.id }),
+      getAdminInvitationsSnapshot({ examSessionId: selectedExamSession.id }),
+      getAdminReportsSnapshot({ examSessionId: selectedExamSession.id }),
     ]);
 
     if (!dashboard || !invitationSnapshot || !reports) {
       return (
         <div className="space-y-6 py-6 sm:py-8 lg:py-8">
           <Card tone="strong" className="space-y-4 p-6 sm:p-7">
-            <p className="kicker">Instruktørflow</p>
+            <p className="kicker">
+              {session.role === AdminRole.SUPER_ADMIN ? "Testvisning" : "Instruktørflow"}
+            </p>
             <h1 className="font-display text-[clamp(2.35rem,4.4vw,3.4rem)] leading-[0.96] uppercase tracking-[-0.04em]">
               Ingen aktiv prøve
             </h1>
@@ -55,28 +301,47 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     }
 
     return (
-      <InstructorExamFlow
-        dashboard={dashboard}
-        invitations={invitationSnapshot}
-        reports={reports}
-        params={params}
-      />
+      <div className="space-y-4">
+        {session.role === AdminRole.SUPER_ADMIN ? (
+          <div className="mx-auto flex w-full max-w-[58rem] justify-end">
+            <Button href="/admin" variant="secondary" size="sm">
+              Tilbage til superadmin
+            </Button>
+          </div>
+        ) : null}
+        <InstructorExamFlow
+          dashboard={dashboard}
+          invitations={invitationSnapshot}
+          reports={reports}
+          examSession={{
+            id: selectedExamSession.id,
+            title: selectedExamSession.title,
+            status: selectedExamSession.status,
+            closedAt: selectedExamSession.closedAt,
+          }}
+          basePath={getSessionHref(selectedExamSession.id, isSuperAdminPreview)}
+          params={params}
+        />
+      </div>
     );
   }
 
-  const dashboard = await getAdminDashboardSnapshot();
+  const [dashboard, invitationSnapshot] = await Promise.all([
+    getAdminDashboardSnapshot(),
+    getAdminInvitationsSnapshot(),
+  ]);
 
   if (!dashboard) {
     return (
       <div className="space-y-6 py-6 sm:py-8 lg:py-8">
         <Card tone="strong" className="space-y-4 p-6 sm:p-7">
-          <p className="kicker">Før prøven</p>
-          <h1 className="font-display text-[clamp(2.35rem,4.4vw,3.4rem)] leading-[0.96] uppercase tracking-[-0.04em]">
-            Ingen aktiv prøve
+          <p className="kicker">Superadmin</p>
+          <h1 className="font-display text-[clamp(2rem,4vw,3rem)] leading-[0.98] uppercase tracking-[-0.03em]">
+            Ingen prøveformater endnu
           </h1>
           <p className="content-copy text-base">
-            Gør en prøve aktiv først. Derefter kan du uploade deltagerlisten og sende
-            invitationslinks.
+            Opret eller importér først et prøveformat. Derefter kan instruktører oprette
+            prøveafholdelser ud fra formatet.
           </p>
         </Card>
       </div>
@@ -84,200 +349,203 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   }
 
   const recentActivity = dashboard.recentAdminActivity.slice(0, 3);
+  const testParticipants = invitationSnapshot?.invitations.slice(0, 3) ?? [];
+  const recentSessions = sessionSnapshot.sessions.slice(0, 4);
+  const activeSessionCount = sessionSnapshot.sessions.filter(
+    (examSession) => examSession.status === "ACTIVE",
+  ).length;
+  const closedSessionCount = sessionSnapshot.sessions.filter(
+    (examSession) => examSession.status === "CLOSED",
+  ).length;
+  const totalSessionParticipants = sessionSnapshot.sessions.reduce(
+    (sum, examSession) => sum + examSession.invitationCount,
+    0,
+  );
+  const totalSessionCompleted = sessionSnapshot.sessions.reduce(
+    (sum, examSession) => sum + examSession.completedAttemptCount,
+    0,
+  );
 
   return (
     <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <Card tone="strong" className="space-y-5 p-6 sm:p-7">
           <div className="space-y-3">
-            <p className="kicker">Før prøven</p>
-            <h1 className="font-display text-[clamp(2.6rem,4.8vw,3.8rem)] leading-[0.95] uppercase tracking-[-0.045em]">
-              Klargør prøven
+            <p className="kicker">Superadmin</p>
+            <h1 className="font-display text-[clamp(2.1rem,4.2vw,3.25rem)] leading-[0.98] uppercase tracking-[-0.035em]">
+              Systemoverblik
             </h1>
             <p className="content-copy text-base">
-              Brug denne side til det praktiske før start: tjek den aktive prøve, upload
-              deltagerlisten og gå derefter videre til <strong>Status</strong>, når links er sendt.
+              Følg prøveafholdelser, rapporter og systemopsætning på tværs. Deltagerlister og
+              Excel-upload ligger hos instruktørens konkrete afholdelse.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
             <div className="rounded-[1rem] border border-border/10 bg-white/55 px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Aktiv prøve
+                Aktive
               </p>
-              <p className="mt-2 text-base font-bold text-foreground">{dashboard.exam.title}</p>
+              <p className="mt-2 font-display text-3xl leading-none">{activeSessionCount}</p>
             </div>
             <div className="rounded-[1rem] border border-border/10 bg-white/55 px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Format
+                Afsluttede
               </p>
-              <p className="mt-2 text-base font-bold text-foreground">
-                {dashboard.exam.questionCount} spørgsmål
-              </p>
+              <p className="mt-2 font-display text-3xl leading-none">{closedSessionCount}</p>
             </div>
             <div className="rounded-[1rem] border border-border/10 bg-white/55 px-4 py-3">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Tidsramme
+                Deltagere
               </p>
-              <p className="mt-2 text-base font-bold text-foreground">
-                {dashboard.exam.timeLimitMinutes} min
+              <p className="mt-2 font-display text-3xl leading-none">{totalSessionParticipants}</p>
+            </div>
+            <div className="rounded-[1rem] border border-border/10 bg-white/55 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                Afleveret
               </p>
+              <p className="mt-2 font-display text-3xl leading-none">{totalSessionCompleted}</p>
             </div>
           </div>
         </Card>
 
         <Card
-          title="Det vigtigste nu"
-          eyebrow="Overblik"
+          title="Hurtige handlinger"
+          eyebrow="Navigation"
           titleClassName="text-[clamp(1.55rem,2.8vw,2.15rem)] leading-[1.02] tracking-[-0.02em]"
           className="space-y-4"
         >
-          <div className="grid gap-3">
-            <div className="rounded-[1rem] border border-border-soft bg-surface px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Invitationer nu
-              </p>
-              <p className="mt-1 text-lg font-bold text-foreground">
-                {dashboard.invitationStats.sent} sendt · {dashboard.invitationStats.opened} åbnet
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {dashboard.invitationStats.completed} færdige · {dashboard.invitationStats.expired}{" "}
-                udløbne
-              </p>
-            </div>
-            <div className="rounded-[1rem] border border-border-soft bg-surface px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Næste skridt
-              </p>
-              <p className="mt-1 text-sm leading-6 text-foreground">
-                Når deltagerne har modtaget links, går du til <strong>Status</strong> for at følge
-                åbnet, aktive og afleverede forsøg.
-              </p>
-            </div>
-            {recentActivity.length > 0 ? (
-              <div className="rounded-[1rem] border border-border-soft bg-surface px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                  Seneste aktivitet
-                </p>
-                <ul className="mt-2 grid gap-2 text-sm text-muted-foreground">
-                  {recentActivity.map((entry) => (
-                    <li key={entry.id}>
-                      {entry.targetLabel ?? entry.action} · {entry.createdAt.toLocaleString("da-DK")}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+          <div className="grid gap-2">
+            <Button href="/admin/status" size="lg" className="w-full">
+              Prøveafholdelser
+            </Button>
+            <Button href="/reports" variant="secondary" size="lg" className="w-full">
+              Rapporter
+            </Button>
+            <Button href="/questions" variant="secondary" size="lg" className="w-full">
+              Prøveformater
+            </Button>
+            <Button href="/admins" variant="secondary" size="lg" className="w-full">
+              Instruktører
+            </Button>
           </div>
         </Card>
       </section>
 
-      {params.batchOk ? (
-        <Card tone="strong" title="Excel-import gennemført" eyebrow="Importstatus">
-          <p className="text-base leading-7 text-foreground">
-            Oprettet: {params.created ?? "0"} · Fejlet: {params.failed ?? "0"} · Ignoreret:{" "}
-            {params.ignored ?? "0"}
+      <Card
+        title="Seneste prøveafholdelser"
+        eyebrow="På tværs af instruktører"
+        titleClassName="text-[clamp(1.7rem,2.8vw,2.25rem)] leading-[1] tracking-[-0.02em]"
+        className="space-y-4"
+      >
+        {recentSessions.length > 0 ? (
+          <div className="grid gap-3">
+            {recentSessions.map((examSession) => (
+              <div
+                key={examSession.id}
+                className="flex flex-col gap-3 rounded-[1rem] border border-border-soft bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <p className="font-bold">{examSession.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {examSession.examSetTitle} · {formatSessionStatus(examSession.status)} ·{" "}
+                    {formatDate(examSession.startsAt)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {examSession.createdByAdmin?.name ?? "Ukendt instruktør"} ·{" "}
+                    {examSession.invitationCount} deltagere · {examSession.completedAttemptCount}{" "}
+                    afleveret
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    href={`/admin?view=instructor&session=${examSession.id}`}
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    Åbn
+                  </Button>
+                  <Button
+                    href={`/reports?examSessionId=${examSession.id}`}
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                  >
+                    Rapport
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm leading-6 text-muted-foreground">
+            Der er endnu ingen konkrete prøveafholdelser. Når instruktører opretter hold, vises de
+            her.
           </p>
-          <p className="text-sm leading-7 text-muted-foreground">
-            Åbn menupunktet <strong>Status</strong> for at følge, om deltagerne kommer ind og
-            gennemfører prøven som forventet.
-          </p>
-        </Card>
-      ) : null}
+        )}
+        <div className="border-t border-border-soft pt-4">
+          <Button href="/admin/status" variant="secondary" size="lg" className="w-full">
+            Se alle afholdelser
+          </Button>
+        </div>
+      </Card>
 
-      {params.batchError ? (
+      <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <Card
-          title="Excel-import kunne ikke gennemføres"
-          eyebrow="Fejl"
-          titleClassName="text-[clamp(1.35rem,2.2vw,1.75rem)] leading-[1.04] tracking-[-0.015em]"
+          title="Seneste aktivitet"
+          eyebrow="Audit"
+          titleClassName="text-[clamp(1.55rem,2.8vw,2.1rem)] leading-[1.02] tracking-[-0.02em]"
+          className="space-y-3"
         >
-          <p className="text-base leading-7 text-danger">{params.batchError}</p>
-          <p className="text-sm leading-7 text-muted-foreground">
-            Kontroller filformatet og prøv igen. Hvis kun en enkelt deltager mangler, kan du bruge
-            formularen nedenfor til manuel oprettelse.
-          </p>
+          {recentActivity.length > 0 ? (
+            <ul className="grid gap-3 text-sm text-muted-foreground">
+              {recentActivity.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="rounded-[1rem] border border-border-soft bg-surface p-3"
+                >
+                  <p className="font-bold text-foreground">{entry.targetLabel ?? entry.action}</p>
+                  <p>{entry.createdAt.toLocaleString("da-DK")}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm leading-6 text-muted-foreground">Ingen aktivitet endnu.</p>
+          )}
         </Card>
-      ) : null}
 
-      <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
         <Card
-          title="Upload deltagerliste"
-          eyebrow="Batch fra Excel"
-          titleClassName="text-[clamp(1.7rem,2.8vw,2.25rem)] leading-[1] tracking-[-0.02em]"
+          title="Support og test"
+          eyebrow="Preview"
+          titleClassName="text-[clamp(1.55rem,2.8vw,2.1rem)] leading-[1.02] tracking-[-0.02em]"
           className="space-y-4"
         >
-          <p className="text-sm leading-7 text-muted-foreground">
-            Upload Excel-filen med deltagerne. Systemet læser kun kolonnerne
-            <strong> Fulde navn</strong> og <strong> E-mailadresse</strong> og ignorerer resten.
+          <p className="text-sm leading-6 text-muted-foreground">
+            Brug preview, når du skal hjælpe en instruktør eller teste deltagerflow uden nye mails.
           </p>
-          <form action={createBatchInvitationsAction} className="grid gap-4">
-            <label className="grid gap-2">
-              <span className="text-sm font-bold uppercase tracking-[0.08em]">Excel-fil</span>
-              <input
-                type="file"
-                name="batchFile"
-                accept=".xlsx,.xls"
-                className="min-h-12 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 py-3 text-base text-foreground focus-visible:outline-none"
-              />
-            </label>
-            <Button type="submit" size="lg">
-              Upload og send links
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button href="/admin?view=instructor" variant="secondary" size="lg" className="w-full">
+              Instruktør-preview
             </Button>
-          </form>
-          <p className="text-xs leading-6 text-muted-foreground">
-            Brug helst en lille testfil først, hvis du er i tvivl om kolonnenavnene.
-          </p>
-        </Card>
-
-        <div className="grid gap-5">
-          <Card
-            title="Tilføj en deltager"
-            eyebrow="Manuel fallback"
-            titleClassName="text-[clamp(1.6rem,2.6vw,2.1rem)] leading-[1] tracking-[-0.02em]"
-            className="space-y-4"
-          >
-            <p className="text-sm leading-7 text-muted-foreground">
-              Brug kun denne, hvis en enkelt deltager mangler efter batch-upload.
-            </p>
-            <form action={createInvitationAction} className="grid gap-4">
-              <TextInput
-                id="recipient-name"
-                name="recipientName"
-                label="Navn"
-                placeholder="Deltagerens navn"
-              />
-              <TextInput
-                id="recipient-email"
-                name="recipientEmail"
-                label="E-mail"
-                type="email"
-                placeholder="navn@example.com"
-              />
-              <input type="hidden" name="channel" value="EMAIL" />
-              <Button type="submit" size="lg">
-                Send til deltager
+            {testParticipants[0] ? (
+              <Button
+                href={testParticipants[0].invitationLink}
+                target="_blank"
+                rel="noreferrer"
+                variant="secondary"
+                size="lg"
+                className="w-full"
+              >
+                Deltager-preview
               </Button>
-            </form>
-          </Card>
-
-          <Card
-            title="Husk under afviklingen"
-            eyebrow="Når prøven er i gang"
-            titleClassName="text-[clamp(1.45rem,2.4vw,1.9rem)] leading-[1.03] tracking-[-0.015em]"
-            className="space-y-4"
-          >
-            <ul className="grid gap-3 text-sm leading-6 text-muted-foreground">
-              <li>
-                <strong className="text-foreground">Gå til Status.</strong> Her ser du, hvem der
-                har åbnet linket, hvem der er i gang, og hvem der er færdige.
-              </li>
-              <li>
-                <strong className="text-foreground">Brug Rapporter bagefter.</strong> Her finder du
-                resultater og eksport.
-              </li>
-            </ul>
-          </Card>
-        </div>
+            ) : (
+              <Button href="/admin/status" variant="secondary" size="lg" className="w-full">
+                Find deltager
+              </Button>
+            )}
+          </div>
+        </Card>
       </section>
     </div>
   );

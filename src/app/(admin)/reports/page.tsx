@@ -6,13 +6,14 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireAdminSession } from "@/lib/admin/auth";
 import { TextInput } from "@/components/ui/text-input";
-import { getAdminReportsSnapshot } from "@/lib/admin/data";
+import { getAdminReportsSnapshot, getExamSessionAdminSnapshot } from "@/lib/admin/data";
 
 export const dynamic = "force-dynamic";
 
 type ReportsPageProps = {
   searchParams: Promise<{
     query?: string;
+    examSessionId?: string;
     outcome?: "all" | "passed" | "failed";
     status?: "all" | "submitted" | "auto_submitted" | "in_progress";
   }>;
@@ -56,16 +57,19 @@ function formatStatus(status: string) {
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   await requireAdminSession(AdminRole.SUPER_ADMIN);
   const filters = await searchParams;
-  const snapshot = await getAdminReportsSnapshot(filters);
+  const [snapshot, sessionSnapshot] = await Promise.all([
+    getAdminReportsSnapshot(filters),
+    getExamSessionAdminSnapshot({ includeAll: true }),
+  ]);
 
   if (!snapshot) {
     return (
       <div className="space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
-          eyebrow="Rapporter"
-          title="Ingen aktiv prøve"
-          titleClassName="text-[clamp(2rem,4.5vw,3.2rem)] leading-[0.96] tracking-[-0.04em]"
-          description="Der findes endnu ingen aktiv prøve at rapportere på."
+          eyebrow="Samlede rapporter"
+          title="Ingen rapportdata endnu"
+          titleClassName="text-[clamp(1.9rem,4vw,3rem)] leading-[0.98] tracking-[-0.03em]"
+          description="Når der findes afleverede forsøg, kan resultater og eksport samles her."
           descriptionClassName="max-w-3xl"
         />
       </div>
@@ -109,6 +113,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   const csvParams = new URLSearchParams();
 
+  if (snapshot.filters.examSessionId) {
+    csvParams.set("examSessionId", snapshot.filters.examSessionId);
+  }
   if (snapshot.filters.query) {
     csvParams.set("query", snapshot.filters.query);
   }
@@ -122,10 +129,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   return (
     <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
-        eyebrow="Efter prøven"
-        title="Resultater og rapporter"
-        titleClassName="text-[clamp(2.15rem,5vw,3.55rem)] leading-[0.96] tracking-[-0.045em]"
-        description="Brug denne side bagefter til at se resultater, filtrere forsøg og eksportere data."
+        eyebrow="Samlede rapporter"
+        title="Rapporter"
+        titleClassName="text-[clamp(2rem,4.4vw,3.2rem)] leading-[0.98] tracking-[-0.035em]"
+        description="Se resultater, filtrér forsøg og eksportér data. Næste trin er at kunne filtrere på prøveformat, instruktør og konkret prøveafholdelse."
         descriptionClassName="max-w-3xl"
         actions={
           <div className="flex flex-wrap gap-3">
@@ -144,7 +151,23 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         eyebrow="Find de rigtige resultater"
         titleClassName="text-[clamp(1.8rem,3.6vw,2.5rem)] leading-[0.98] tracking-[-0.03em]"
       >
-        <form action="/reports" className="grid gap-4 lg:grid-cols-[1.4fr_0.8fr_0.8fr_auto]">
+        <form action="/reports" className="grid gap-4 lg:grid-cols-[1.2fr_1fr_0.8fr_0.8fr_auto]">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-bold uppercase tracking-[0.08em]">Afholdelse</span>
+            <select
+              name="examSessionId"
+              defaultValue={snapshot.filters.examSessionId}
+              className="min-h-12 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 text-base text-foreground focus-visible:outline-none"
+            >
+              <option value="">Alle</option>
+              {sessionSnapshot.sessions.map((examSession) => (
+                <option key={examSession.id} value={examSession.id}>
+                  {examSession.title}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <TextInput
             id="reports-query"
             name="query"

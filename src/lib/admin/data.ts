@@ -1,4 +1,4 @@
-import { AdminRole, AttemptStatus, Prisma } from "@prisma/client";
+import { AdminRole, AttemptStatus, ExamSessionStatus, Prisma } from "@prisma/client";
 
 import { getPrismaClient } from "@/lib/db/prisma";
 
@@ -11,6 +11,11 @@ export type ReportFilters = {
   query?: string;
   outcome?: "all" | "passed" | "failed";
   status?: "all" | "submitted" | "auto_submitted" | "in_progress";
+  examSessionId?: string;
+};
+
+type SnapshotScope = {
+  examSessionId?: string | null;
 };
 
 function slugify(value: string) {
@@ -28,12 +33,22 @@ function createExternalKey(questionText: string) {
   return `${slug}-${Date.now()}`;
 }
 
-export async function getActiveExamAdminSnapshot() {
+export async function getActiveExamAdminSnapshot(scope: SnapshotScope = {}) {
   const prisma = getPrismaClient();
+  const attemptWhere = scope.examSessionId ? { examSessionId: scope.examSessionId } : {};
 
   const examSet = await prisma.examSet.findFirst({
     where: {
       isActive: true,
+      ...(scope.examSessionId
+        ? {
+            examSessions: {
+              some: {
+                id: scope.examSessionId,
+              },
+            },
+          }
+        : {}),
     },
     include: {
       examQuestions: {
@@ -58,6 +73,7 @@ export async function getActiveExamAdminSnapshot() {
         },
       },
       attempts: {
+        where: attemptWhere,
         orderBy: {
           startedAt: "desc",
         },
@@ -142,10 +158,10 @@ export async function getActiveExamAdminSnapshot() {
   };
 }
 
-export async function getAdminDashboardSnapshot() {
+export async function getAdminDashboardSnapshot(scope: SnapshotScope = {}) {
   const [examSnapshot, reportSnapshot, auditLogSnapshot] = await Promise.all([
-    getActiveExamAdminSnapshot(),
-    getAdminReportsSnapshot(),
+    getActiveExamAdminSnapshot(scope),
+    getAdminReportsSnapshot({ examSessionId: scope.examSessionId ?? undefined }),
     getAdminAuditSnapshot(),
   ]);
 
@@ -157,6 +173,7 @@ export async function getAdminDashboardSnapshot() {
     by: ["status"],
     where: {
       examSetId: examSnapshot.examSet.id,
+      ...(scope.examSessionId ? { examSessionId: scope.examSessionId } : {}),
     },
     _count: {
       _all: true,
@@ -269,17 +286,134 @@ export async function getAdminUsersSnapshot() {
   };
 }
 
+export async function getExamSessionAdminSnapshot(input: {
+  adminUserId?: string | null;
+  includeAll?: boolean;
+} = {}) {
+  const prisma = getPrismaClient();
+  const [examSets, sessions] = await Promise.all([
+    prisma.examSet.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: {
+        title: "asc",
+      },
+      select: {
+        id: true,
+        title: true,
+        timeLimitMinutes: true,
+        passPercentage: true,
+        examQuestions: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    }),
+    prisma.examSession.findMany({
+      where:
+        input.includeAll || !input.adminUserId
+          ? {}
+          : {
+              createdByAdminId: input.adminUserId,
+            },
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        examSet: {
+          select: {
+            title: true,
+            timeLimitMinutes: true,
+            passPercentage: true,
+          },
+        },
+        createdByAdmin: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            invitations: true,
+            attempts: true,
+          },
+        },
+        attempts: {
+          where: {
+            status: {
+              in: [AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED],
+            },
+          },
+          select: {
+            id: true,
+            scorePercentage: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    examSets: examSets.map((examSet) => ({
+      id: examSet.id,
+      title: examSet.title,
+      timeLimitMinutes: examSet.timeLimitMinutes,
+      passPercentage: examSet.passPercentage,
+      questionCount: examSet.examQuestions.length,
+    })),
+    sessions: sessions.map((session) => {
+      const scoredAttempts = session.attempts
+        .map((attempt) => toScoreNumber(attempt.scorePercentage))
+        .filter((score): score is number => score !== null);
+      const passedCount = scoredAttempts.filter(
+        (score) => score >= session.examSet.passPercentage,
+      ).length;
+
+      return {
+        id: session.id,
+        title: session.title,
+        location: session.location,
+        status: session.status,
+        startsAt: session.startsAt,
+        closedAt: session.closedAt,
+        createdAt: session.createdAt,
+        examSetTitle: session.examSet.title,
+        timeLimitMinutes: session.examSet.timeLimitMinutes,
+        passPercentage: session.examSet.passPercentage,
+        createdByAdmin: session.createdByAdmin,
+        invitationCount: session._count.invitations,
+        attemptCount: session._count.attempts,
+        completedAttemptCount: session.attempts.length,
+        passRate:
+          scoredAttempts.length > 0
+            ? Number(((passedCount / scoredAttempts.length) * 100).toFixed(1))
+            : null,
+      };
+    }),
+    statusOptions: [
+      { value: ExamSessionStatus.DRAFT, label: "Kladde" },
+      { value: ExamSessionStatus.ACTIVE, label: "Aktiv" },
+      { value: ExamSessionStatus.CLOSED, label: "Afsluttet" },
+    ],
+  };
+}
+
 function normaliseReportFilters(filters?: ReportFilters) {
   return {
     query: filters?.query?.trim() ?? "",
     outcome: filters?.outcome ?? "all",
     status: filters?.status ?? "all",
+    examSessionId: filters?.examSessionId?.trim() ?? "",
   };
 }
 
 function buildAttemptWhereClause(examSetId: string, filters: ReturnType<typeof normaliseReportFilters>) {
   const where: Prisma.ParticipantAttemptWhereInput = {
     examSetId,
+    ...(filters.examSessionId ? { examSessionId: filters.examSessionId } : {}),
   };
 
   if (filters.query) {
@@ -325,6 +459,15 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
   const examSet = await prisma.examSet.findFirst({
     where: {
       isActive: true,
+      ...(filters?.examSessionId
+        ? {
+            examSessions: {
+              some: {
+                id: filters.examSessionId,
+              },
+            },
+          }
+        : {}),
     },
     include: {
       examQuestions: {

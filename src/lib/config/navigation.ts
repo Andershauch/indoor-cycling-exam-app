@@ -23,25 +23,21 @@ export const primaryNavigation: NavigationItem[] = [
 
 export const adminNavigationSections: AdminNavigationSection[] = [
   {
-    label: "Før prøven",
+    label: "Afholdelse",
     items: [
-      { href: "/admin", label: "Afhold prøve" },
-      { href: "/invitations", label: "Invitationer", roles: [AdminRole.SUPER_ADMIN] },
+      { href: "/admin", label: "Mine prøveafholdelser" },
+      { href: "/admin/status", label: "Prøveafholdelser", roles: [AdminRole.SUPER_ADMIN] },
     ],
   },
   {
-    label: "Under prøven",
-    items: [{ href: "/admin/status", label: "Status", roles: [AdminRole.SUPER_ADMIN] }],
-  },
-  {
-    label: "Efter prøven",
-    items: [{ href: "/reports", label: "Rapporter", roles: [AdminRole.SUPER_ADMIN] }],
+    label: "Rapportering",
+    items: [{ href: "/reports", label: "Samlede rapporter", roles: [AdminRole.SUPER_ADMIN] }],
   },
   {
     label: "System",
     items: [
-      { href: "/questions", label: "Spørgsmål", roles: [AdminRole.SUPER_ADMIN] },
-      { href: "/admins", label: "Admins", roles: [AdminRole.SUPER_ADMIN] },
+      { href: "/questions", label: "Prøveformater", roles: [AdminRole.SUPER_ADMIN] },
+      { href: "/admins", label: "Instruktører", roles: [AdminRole.SUPER_ADMIN] },
     ],
   },
 ];

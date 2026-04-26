@@ -63,9 +63,9 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
       <div className="space-y-6 py-6 sm:py-8 lg:py-10">
         <PageHeader
           eyebrow="System"
-          title="Ingen aktiv prøve"
-          titleClassName="text-[clamp(2rem,4.5vw,3.2rem)] leading-[0.96] tracking-[-0.04em]"
-          description="Importér eller opret først en aktiv prøve, før spørgsmålene kan redigeres."
+          title="Ingen prøveformater endnu"
+          titleClassName="text-[clamp(1.9rem,4vw,3rem)] leading-[0.98] tracking-[-0.03em]"
+          description="Importér eller opret først et prøveformat, før spørgsmålene kan redigeres."
           descriptionClassName="max-w-3xl"
         />
       </div>
@@ -164,9 +164,9 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
     <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
         eyebrow="System"
-        title="Spørgsmål og rækkefølge"
-        titleClassName="text-[clamp(2.15rem,5vw,3.55rem)] leading-[0.96] tracking-[-0.045em]"
-        description="Her vedligeholder du den faste prøve. Korrekte svar og rækkefølge er samlet i én arbejdsflade."
+        title="Prøveformater"
+        titleClassName="text-[clamp(2rem,4.4vw,3.2rem)] leading-[0.98] tracking-[-0.035em]"
+        description="Her vedligeholder superadmin systemets prøveformat: spørgsmål, korrekte svar, rækkefølge, tidsgrænse og beståelseskrav."
         descriptionClassName="max-w-3xl"
       />
 
@@ -174,7 +174,7 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
         <AdminStatCard
           label="Spørgsmål"
           value={String(snapshot.examSet.questionCount)}
-          helper="Fast rækkefølge i den aktive prøve."
+          helper="Fast rækkefølge i prøveformatet."
         />
         <AdminStatCard
           label="Forsøg"
@@ -198,9 +198,9 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
       </section>
 
       {questionsLocked ? (
-        <Card tone="strong" title="Prøven er låst" eyebrow="Databeskyttelse">
+        <Card tone="strong" title="Prøveformatet er låst" eyebrow="Databeskyttelse">
           <p className="text-base leading-7 text-foreground">
-            Den aktive prøve har allerede deltagerforsøg. Derfor er opret, redigér, slet og
+            Dette prøveformat har allerede deltagerforsøg. Derfor er opret, redigér, slet og
             rækkefølgeændringer låst for at beskytte resultater og rapportdata.
           </p>
         </Card>
@@ -208,8 +208,8 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
 
       <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
         <Card
-          title="Aktiv prøve"
-          eyebrow="Status"
+          title="Aktivt prøveformat"
+          eyebrow="Format"
           titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
           className="space-y-5"
         >
@@ -289,7 +289,7 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
       </section>
 
       <AdminTable
-        caption="Spørgsmål i aktiv prøve"
+        caption="Spørgsmål i aktivt prøveformat"
         columns={questionColumns}
         rows={questionRows}
         emptyMessage="Der er endnu ingen spørgsmål i den aktive prøve."

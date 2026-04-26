@@ -33,6 +33,12 @@ enum AttemptStatus {
   EXPIRED
 }
 
+enum ExamSessionStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
 model AdminUser {
   id             String       @id @default(cuid())
   email          String       @unique
@@ -43,6 +49,7 @@ model AdminUser {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   createdExams   ExamSet[]
+  examSessions   ExamSession[]
   createdInvites Invitation[]
   magicLinkTokens AdminMagicLinkToken[]
   auditLogs      AdminAuditLog[]
@@ -107,10 +114,31 @@ model ExamSet {
   createdByAdminId String?
   createdByAdmin   AdminUser?          @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
   examQuestions    ExamQuestion[]
+  examSessions     ExamSession[]
   invitations      Invitation[]
   attempts         ParticipantAttempt[]
 
   @@index([isActive])
+}
+
+model ExamSession {
+  id               String            @id @default(cuid())
+  examSetId        String
+  createdByAdminId String?
+  title            String
+  location         String?
+  status           ExamSessionStatus @default(DRAFT)
+  startsAt         DateTime?
+  closedAt         DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  examSet          ExamSet           @relation(fields: [examSetId], references: [id], onDelete: Restrict)
+  createdByAdmin   AdminUser?        @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
+  invitations      Invitation[]
+  attempts         ParticipantAttempt[]
+
+  @@index([examSetId, status])
+  @@index([createdByAdminId, createdAt])
 }
 
 model Question {
@@ -162,6 +190,7 @@ model AnswerOption {
 model Invitation {
   id                String             @id @default(cuid())
   examSetId         String
+  examSessionId     String?
   createdByAdminId  String?
   channel           InvitationChannel
   status            InvitationStatus   @default(CREATED)
@@ -180,16 +209,19 @@ model Invitation {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   examSet           ExamSet            @relation(fields: [examSetId], references: [id], onDelete: Cascade)
+  examSession       ExamSession?       @relation(fields: [examSessionId], references: [id], onDelete: SetNull)
   createdByAdmin    AdminUser?         @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
   attempts          ParticipantAttempt[]
 
   @@index([examSetId, status])
+  @@index([examSessionId, status])
   @@index([channel, status])
 }
 
 model ParticipantAttempt {
   id                   String             @id @default(cuid())
   examSetId            String
+  examSessionId        String?
   invitationId         String?
   status               AttemptStatus      @default(IN_PROGRESS)
   participantName      String?
@@ -206,10 +238,12 @@ model ParticipantAttempt {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   examSet              ExamSet            @relation(fields: [examSetId], references: [id], onDelete: Restrict)
+  examSession          ExamSession?       @relation(fields: [examSessionId], references: [id], onDelete: SetNull)
   invitation           Invitation?        @relation(fields: [invitationId], references: [id], onDelete: SetNull)
   answers              AttemptAnswer[]
 
   @@index([examSetId, status])
+  @@index([examSessionId, status])
   @@index([submittedAt])
 }
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { AdminRole, InvitationChannel } from "@prisma/client";
+import { AdminRole, ExamSessionStatus, InvitationChannel } from "@prisma/client";
 
 import { createAdminAuditLog, getAdminRequestContext } from "@/lib/admin/audit";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/admin/auth";
 import {
   ensureEditableExamSet,
+  getExamSessionAdminSnapshot,
   parseQuestionFormData,
   resequenceExamQuestions,
 } from "@/lib/admin/data";
@@ -67,6 +68,62 @@ async function logAdminAction(input: {
     ipAddress: requestContext.ipAddress,
     userAgent: requestContext.userAgent,
   });
+}
+
+async function getExamTargetForInvitation(input: {
+  adminUserId: string;
+  role: AdminRole;
+  examSessionId?: string | null;
+}) {
+  const prisma = getPrismaClient();
+
+  if (input.examSessionId) {
+    const examSession = await prisma.examSession.findFirst({
+      where: {
+        id: input.examSessionId,
+        ...(input.role === AdminRole.SUPER_ADMIN
+          ? {}
+          : {
+              createdByAdminId: input.adminUserId,
+            }),
+      },
+      select: {
+        id: true,
+        examSetId: true,
+        title: true,
+      },
+    });
+
+    if (!examSession) {
+      throw new Error("Prøveafholdelsen blev ikke fundet.");
+    }
+
+    return {
+      examSetId: examSession.examSetId,
+      examSessionId: examSession.id,
+      targetLabel: examSession.title,
+    };
+  }
+
+  const examSet = await prisma.examSet.findFirst({
+    where: {
+      isActive: true,
+    },
+    select: {
+      id: true,
+      title: true,
+    },
+  });
+
+  if (!examSet) {
+    throw new Error("Der findes ingen aktiv prøve.");
+  }
+
+  return {
+    examSetId: examSet.id,
+    examSessionId: null,
+    targetLabel: examSet.title,
+  };
 }
 
 export async function loginAdminAction(formData: FormData) {
@@ -308,6 +365,124 @@ export async function toggleAdminUserActiveAction(formData: FormData) {
   }
 
   redirect(ADMINS_ROUTE);
+}
+
+export async function createExamSessionAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const prisma = getPrismaClient();
+  const examSetId = String(formData.get("examSetId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  const location = String(formData.get("location") ?? "").trim() || null;
+  const view = String(formData.get("view") ?? "").trim();
+
+  if (!examSetId) {
+    throw new Error("Vælg et prøveformat.");
+  }
+
+  const availableFormats = await getExamSessionAdminSnapshot({
+    adminUserId: session.id,
+    includeAll: session.role === AdminRole.SUPER_ADMIN,
+  });
+  const selectedFormat = availableFormats.examSets.find((examSet) => examSet.id === examSetId);
+
+  if (!selectedFormat) {
+    throw new Error("Prøveformatet blev ikke fundet.");
+  }
+
+  const examSession = await prisma.examSession.create({
+    data: {
+      examSetId,
+      createdByAdminId: session.id,
+      title: title || `${selectedFormat.title} - ${new Date().toLocaleDateString("da-DK")}`,
+      location,
+      status: ExamSessionStatus.ACTIVE,
+      startsAt: new Date(),
+    },
+  });
+
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "EXAM_SESSION_CREATED",
+    targetType: "exam_session",
+    targetId: examSession.id,
+    targetLabel: examSession.title,
+    metadata: {
+      examSetId,
+    },
+  });
+
+  revalidatePath("/admin");
+  redirect(`/admin${view === "instructor" ? "?view=instructor&" : "?"}session=${examSession.id}`);
+}
+
+export async function closeExamSessionAction(formData: FormData) {
+  const session = await requireAdminSession();
+  const prisma = getPrismaClient();
+  const examSessionId = String(formData.get("examSessionId") ?? "").trim();
+  const returnTo = getReturnTo(formData, "/admin");
+
+  if (!examSessionId) {
+    throw new Error("examSessionId mangler.");
+  }
+
+  const examSession = await prisma.examSession.findFirst({
+    where: {
+      id: examSessionId,
+      ...(session.role === AdminRole.SUPER_ADMIN
+        ? {}
+        : {
+            createdByAdminId: session.id,
+          }),
+    },
+    include: {
+      attempts: {
+        where: {
+          status: "IN_PROGRESS",
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  if (!examSession) {
+    throw new Error("Prøveafholdelsen blev ikke fundet.");
+  }
+
+  if (examSession.status === ExamSessionStatus.CLOSED) {
+    redirect(appendRedirectParams(returnTo, { closed: "already" }));
+  }
+
+  if (examSession.attempts.length > 0) {
+    redirect(
+      appendRedirectParams(returnTo, {
+        closeError: "Afholdelsen kan ikke afsluttes, mens deltagere er i gang.",
+      }),
+    );
+  }
+
+  await prisma.examSession.update({
+    where: {
+      id: examSession.id,
+    },
+    data: {
+      status: ExamSessionStatus.CLOSED,
+      closedAt: new Date(),
+    },
+  });
+
+  await logAdminAction({
+    adminUserId: session.id,
+    action: "EXAM_SESSION_CLOSED",
+    targetType: "exam_session",
+    targetId: examSession.id,
+    targetLabel: examSession.title,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/reports");
+  redirect(appendRedirectParams(returnTo, { closed: "1" }));
 }
 
 export async function createQuestionAction(formData: FormData) {
@@ -602,27 +777,11 @@ export async function moveQuestionAction(formData: FormData) {
 export async function createInvitationAction(formData: FormData) {
   const session = await requireAdminSession();
   const returnTo = getReturnTo(formData);
-  const prisma = getPrismaClient();
-  const examSet = await prisma.examSet.findFirst({
-    where: {
-      isActive: true,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!examSet) {
-    throw new Error("Der findes ingen aktiv prøve.");
-  }
-
-  const adminUser = await prisma.adminUser.findUnique({
-    where: {
-      email: session.email,
-    },
-    select: {
-      id: true,
-    },
+  const examSessionId = String(formData.get("examSessionId") ?? "").trim() || null;
+  const target = await getExamTargetForInvitation({
+    adminUserId: session.id,
+    role: session.role,
+    examSessionId,
   });
 
   const channelValue = String(formData.get("channel") ?? "").trim().toUpperCase();
@@ -637,8 +796,9 @@ export async function createInvitationAction(formData: FormData) {
 
   try {
     await createAndDispatchInvitation({
-      examSetId: examSet.id,
-      createdByAdminId: adminUser?.id ?? null,
+      examSetId: target.examSetId,
+      examSessionId: target.examSessionId,
+      createdByAdminId: session.id,
       channel: channelValue,
       recipientName,
       recipientEmail,
@@ -658,8 +818,8 @@ export async function createInvitationAction(formData: FormData) {
   await logAdminAction({
     adminUserId: session.id,
     action: "INVITATION_CREATED",
-    targetType: "exam_set",
-    targetId: examSet.id,
+    targetType: target.examSessionId ? "exam_session" : "exam_set",
+    targetId: target.examSessionId ?? target.examSetId,
     targetLabel: recipientEmail || recipientPhone || recipientName || "invitation",
     metadata: {
       channel: channelValue,
@@ -679,34 +839,24 @@ export async function createInvitationAction(formData: FormData) {
 export async function createBatchInvitationsAction(formData: FormData) {
   const session = await requireAdminSession();
   const returnTo = getReturnTo(formData);
-  const prisma = getPrismaClient();
-  const examSet = await prisma.examSet.findFirst({
-    where: {
-      isActive: true,
-    },
-    select: {
-      id: true,
-    },
+  const examSessionId = String(formData.get("examSessionId") ?? "").trim() || null;
+  const target = await getExamTargetForInvitation({
+    adminUserId: session.id,
+    role: session.role,
+    examSessionId,
+  }).catch((error) => {
+    redirect(
+      appendRedirectParams(returnTo, {
+        batchError: error instanceof Error ? error.message : "Ingen aktiv prøve",
+      }),
+    );
   });
-
-  if (!examSet) {
-    redirect(appendRedirectParams(returnTo, { batchError: "Ingen aktiv prøve" }));
-  }
 
   const upload = formData.get("batchFile");
 
   if (!(upload instanceof File) || upload.size === 0) {
     redirect(appendRedirectParams(returnTo, { batchError: "Vælg en Excel-fil" }));
   }
-
-  const adminUser = await prisma.adminUser.findUnique({
-    where: {
-      email: session.email,
-    },
-    select: {
-      id: true,
-    },
-  });
 
   try {
     const parsed = await parseParticipantBatchFile(upload);
@@ -725,8 +875,9 @@ export async function createBatchInvitationsAction(formData: FormData) {
     for (const participant of parsed.entries) {
       try {
         await createAndDispatchInvitation({
-          examSetId: examSet.id,
-          createdByAdminId: adminUser?.id ?? null,
+          examSetId: target.examSetId,
+          examSessionId: target.examSessionId,
+          createdByAdminId: session.id,
           channel: InvitationChannel.EMAIL,
           recipientName: participant.name,
           recipientEmail: participant.email,
@@ -741,8 +892,8 @@ export async function createBatchInvitationsAction(formData: FormData) {
     await logAdminAction({
       adminUserId: session.id,
       action: "INVITATION_BATCH_PROCESSED",
-      targetType: "exam_set",
-      targetId: examSet.id,
+      targetType: target.examSessionId ? "exam_session" : "exam_set",
+      targetId: target.examSessionId ?? target.examSetId,
       targetLabel: upload.name,
       metadata: {
         createdCount,

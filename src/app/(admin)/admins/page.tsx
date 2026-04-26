@@ -15,7 +15,7 @@ import { getAdminUsersSnapshot } from "@/lib/admin/data";
 export const dynamic = "force-dynamic";
 
 const columns = [
-  { key: "identity", label: "Admin" },
+  { key: "identity", label: "Instruktør" },
   { key: "role", label: "Rolle" },
   { key: "status", label: "Status" },
   { key: "activity", label: "Aktivitet" },
@@ -99,15 +99,15 @@ export default async function AdminUsersPage() {
     <div className="space-y-6 py-6 sm:py-8 lg:space-y-7 lg:py-8">
       <PageHeader
         eyebrow="System"
-        title="Admin-brugere"
-        titleClassName="text-[clamp(2.1rem,4.8vw,3.25rem)] leading-[0.96] tracking-[-0.04em]"
-        description="Her styrer du, hvem der har adgang til admin, og hvilken rolle de har."
+        title="Instruktører"
+        titleClassName="text-[clamp(2rem,4.4vw,3.2rem)] leading-[0.98] tracking-[-0.035em]"
+        description="Her styrer superadmin, hvem der kan oprette og afholde prøveafholdelser for egne hold."
         descriptionClassName="max-w-3xl"
       />
 
       <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
         <Card
-          title="Opret admin"
+          title="Opret instruktør"
           eyebrow="Ny adgang"
           titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
         >
@@ -141,7 +141,7 @@ export default async function AdminUsersPage() {
               </select>
             </label>
             <Button type="submit" size="lg">
-              Opret admin
+              Opret adgang
             </Button>
           </form>
         </Card>
@@ -153,8 +153,8 @@ export default async function AdminUsersPage() {
           className="space-y-4"
         >
           <p className="text-sm leading-7 text-muted-foreground">
-            Superadmin kan ændre spørgsmål, roller og alle systemopsætninger. Almindelig admin kan
-            bruge magic link-login, uploade Excel-filer, sende invitationer og se rapporter.
+            Superadmin kan ændre prøveformater, roller og systemopsætning. Instruktører kan bruge
+            magic link-login, oprette prøveafholdelser, tilføje deltagere og følge egne resultater.
           </p>
           <ul className="space-y-2 text-sm leading-6 text-muted-foreground">
             <li>Bootstrap-superadmin er bundet til miljøvariablen og kan ikke slås fra i UI.</li>
@@ -165,10 +165,10 @@ export default async function AdminUsersPage() {
       </section>
 
       <AdminTable
-        caption="Admin-brugere"
+        caption="Instruktører og admins"
         columns={columns}
         rows={rows}
-        emptyMessage="Der er endnu ingen admin-brugere."
+        emptyMessage="Der er endnu ingen instruktører."
       />
     </div>
   );
