@@ -400,96 +400,128 @@ export async function submitAttempt(
   status: "SUBMITTED" | "AUTO_SUBMITTED" = "SUBMITTED",
 ) {
   const invitationId = await requireParticipantInvitationId();
+  const prisma = getPrismaClient();
 
-  return getPrismaClient().$transaction(async (tx) => {
-    const attempt = await tx.participantAttempt.findFirst({
-      where: {
-        id: attemptId,
-        invitationId,
-      },
-      include: {
-        examSet: {
-          include: {
-            examQuestions: {
-              orderBy: {
-                position: "asc",
-              },
-              include: {
-                question: {
-                  include: {
-                    options: true,
-                  },
+  const attempt = await prisma.participantAttempt.findFirst({
+    where: {
+      id: attemptId,
+      invitationId,
+    },
+    include: {
+      examSet: {
+        include: {
+          examQuestions: {
+            orderBy: {
+              position: "asc",
+            },
+            include: {
+              question: {
+                include: {
+                  options: true,
                 },
               },
             },
           },
         },
-        answers: true,
+      },
+      answers: true,
+    },
+  });
+
+  if (!attempt) {
+    throw new Error("Forsoget blev ikke fundet eller tilhorer ikke den aktive session.");
+  }
+
+  if (attempt.status !== AttemptStatus.IN_PROGRESS) {
+    return attempt;
+  }
+
+  const correctByExamQuestionId = new Map(
+    attempt.examSet.examQuestions.map((examQuestion) => [
+      examQuestion.id,
+      examQuestion.question.options.find((option) => option.isCorrect)?.id ?? null,
+    ]),
+  );
+  const correctAnswerFilters = attempt.answers.flatMap((answer) => {
+    const correctOptionId = correctByExamQuestionId.get(answer.examQuestionId) ?? null;
+
+    if (!answer.selectedOptionId || !correctOptionId || answer.selectedOptionId !== correctOptionId) {
+      return [];
+    }
+
+    return [
+      {
+        examQuestionId: answer.examQuestionId,
+        selectedOptionId: answer.selectedOptionId,
+      },
+    ];
+  });
+
+  const answeredCount = attempt.answers.filter((answer) => answer.selectedOptionId).length;
+  const correctAnswerCount = correctAnswerFilters.length;
+
+  const totalQuestionCount = attempt.examSet.examQuestions.length;
+  const scorePercentage =
+    totalQuestionCount > 0
+      ? Number(((correctAnswerCount / totalQuestionCount) * 100).toFixed(2))
+      : 0;
+  const submittedAt = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    await tx.attemptAnswer.updateMany({
+      where: {
+        attemptId,
+      },
+      data: {
+        isCorrect: false,
       },
     });
 
-    if (!attempt) {
-      throw new Error("Forsoget blev ikke fundet eller tilhorer ikke den aktive session.");
-    }
-
-    if (attempt.status !== AttemptStatus.IN_PROGRESS) {
-      return attempt;
-    }
-
-    const correctByExamQuestionId = new Map(
-      attempt.examSet.examQuestions.map((examQuestion) => [
-        examQuestion.id,
-        examQuestion.question.options.find((option) => option.isCorrect)?.id ?? null,
-      ]),
-    );
-
-    const answerUpdates = attempt.answers.map((answer) => {
-      const correctOptionId = correctByExamQuestionId.get(answer.examQuestionId) ?? null;
-      const isCorrect =
-        answer.selectedOptionId && correctOptionId
-          ? answer.selectedOptionId === correctOptionId
-          : false;
-
-      return tx.attemptAnswer.update({
+    if (correctAnswerFilters.length > 0) {
+      await tx.attemptAnswer.updateMany({
         where: {
-          id: answer.id,
+          attemptId,
+          OR: correctAnswerFilters,
         },
         data: {
-          isCorrect,
+          isCorrect: true,
         },
       });
-    });
+    }
 
-    await Promise.all(answerUpdates);
-
-    const answeredCount = attempt.answers.filter((answer) => answer.selectedOptionId).length;
-    const correctAnswerCount = attempt.answers.filter((answer) => {
-      const correctOptionId = correctByExamQuestionId.get(answer.examQuestionId) ?? null;
-      return Boolean(
-        answer.selectedOptionId &&
-          correctOptionId &&
-          answer.selectedOptionId === correctOptionId,
-      );
-    }).length;
-
-    const totalQuestionCount = attempt.examSet.examQuestions.length;
-    const scorePercentage =
-      totalQuestionCount > 0
-        ? Number(((correctAnswerCount / totalQuestionCount) * 100).toFixed(2))
-        : 0;
-
-    const updatedAttempt = await tx.participantAttempt.update({
+    const result = await tx.participantAttempt.updateMany({
       where: {
         id: attemptId,
+        invitationId,
+        status: AttemptStatus.IN_PROGRESS,
       },
       data: {
         status,
-        submittedAt: new Date(),
-        lastSavedAt: new Date(),
+        submittedAt,
+        lastSavedAt: submittedAt,
         correctAnswerCount,
         totalQuestionCount,
         scorePercentage: new Prisma.Decimal(scorePercentage),
         currentQuestionIndex: Math.max(0, Math.min(totalQuestionCount - 1, answeredCount)),
+      },
+    });
+
+    if (attempt.invitationId) {
+      await tx.invitation.update({
+        where: {
+          id: attempt.invitationId,
+        },
+        data: {
+          status: "COMPLETED",
+          completedAt: submittedAt,
+        },
+      });
+    }
+
+    const updatedAttempt = await tx.participantAttempt.findFirst({
+      where: {
+        id: attemptId,
+        invitationId,
       },
       include: {
         examSet: {
@@ -501,16 +533,12 @@ export async function submitAttempt(
       },
     });
 
-    if (attempt.invitationId) {
-      await tx.invitation.update({
-        where: {
-          id: attempt.invitationId,
-        },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date(),
-        },
-      });
+    if (!updatedAttempt) {
+      throw new Error("Forsoget blev ikke fundet eller tilhorer ikke den aktive session.");
+    }
+
+    if (result.count === 0) {
+      return updatedAttempt;
     }
 
     return updatedAttempt;
