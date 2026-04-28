@@ -14,6 +14,8 @@ type ReportsPageProps = {
   searchParams: Promise<{
     query?: string;
     examSessionId?: string;
+    examSetId?: string;
+    adminUserId?: string;
     outcome?: "all" | "passed" | "failed";
     status?: "all" | "submitted" | "auto_submitted" | "in_progress";
   }>;
@@ -21,6 +23,7 @@ type ReportsPageProps = {
 
 const columns = [
   { key: "participant", label: "Deltager" },
+  { key: "context", label: "Afholdelse" },
   { key: "result", label: "Resultat" },
   { key: "status", label: "Status" },
   { key: "submitted", label: "Afleveret" },
@@ -76,12 +79,52 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     );
   }
 
+  const examSetOptions = Array.from(
+    new Map(
+      [
+        ...sessionSnapshot.examSets.map((examSet) => [examSet.id, examSet.title] as const),
+        ...sessionSnapshot.sessions.map(
+          (examSession) => [examSession.examSetId, examSession.examSetTitle] as const,
+        ),
+      ].filter(([id]) => Boolean(id)),
+    ),
+  ).map(([id, title]) => ({ id, title }));
+  const instructorOptions = Array.from(
+    new Map(
+      sessionSnapshot.sessions
+        .map((examSession) =>
+          examSession.createdByAdmin
+            ? [
+                examSession.createdByAdmin.id,
+                {
+                  id: examSession.createdByAdmin.id,
+                  name: examSession.createdByAdmin.name,
+                  email: examSession.createdByAdmin.email,
+                },
+              ] as const
+            : null,
+        )
+        .filter((entry): entry is readonly [string, { id: string; name: string; email: string }] =>
+          Boolean(entry),
+        ),
+    ),
+  ).map(([, instructor]) => instructor);
+
   const rows = snapshot.attempts.map((attempt) => ({
     participant: (
       <div className="space-y-1">
         <p className="font-bold">{attempt.participantName || "Ukendt deltager"}</p>
         <p className="text-xs text-muted-foreground">
           {attempt.participantEmail || attempt.participantPhone || "Ingen kontaktinfo"}
+        </p>
+      </div>
+    ),
+    context: (
+      <div className="space-y-1">
+        <p className="font-bold">{attempt.examSessionTitle}</p>
+        <p className="text-xs text-muted-foreground">{attempt.examSetTitle}</p>
+        <p className="text-xs text-muted-foreground">
+          {attempt.instructorName || attempt.instructorEmail || "Ingen instruktør"}
         </p>
       </div>
     ),
@@ -104,6 +147,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     question: (
       <div className="space-y-1">
         <p className="font-bold">Spørgsmål {question.position}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+          {question.examSetTitle}
+        </p>
         <p className="text-sm text-muted-foreground">{question.questionText}</p>
       </div>
     ),
@@ -115,6 +161,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   if (snapshot.filters.examSessionId) {
     csvParams.set("examSessionId", snapshot.filters.examSessionId);
+  }
+  if (snapshot.filters.examSetId) {
+    csvParams.set("examSetId", snapshot.filters.examSetId);
+  }
+  if (snapshot.filters.adminUserId) {
+    csvParams.set("adminUserId", snapshot.filters.adminUserId);
   }
   if (snapshot.filters.query) {
     csvParams.set("query", snapshot.filters.query);
@@ -132,7 +184,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         eyebrow="Samlede rapporter"
         title="Rapporter"
         titleClassName="text-[clamp(2rem,4.4vw,3.2rem)] leading-[0.98] tracking-[-0.035em]"
-        description="Se resultater, filtrér forsøg og eksportér data. Næste trin er at kunne filtrere på prøveformat, instruktør og konkret prøveafholdelse."
+        description="Se resultater på tværs af prøveafholdelser, instruktører og prøveformater. Eksporten indeholder samme kontekst som tabellen."
         descriptionClassName="max-w-3xl"
         actions={
           <div className="flex flex-wrap gap-3">
@@ -151,7 +203,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         eyebrow="Find de rigtige resultater"
         titleClassName="text-[clamp(1.8rem,3.6vw,2.5rem)] leading-[0.98] tracking-[-0.03em]"
       >
-        <form action="/reports" className="grid gap-4 lg:grid-cols-[1.2fr_1fr_0.8fr_0.8fr_auto]">
+        <form action="/reports" className="grid gap-4 xl:grid-cols-[1fr_1fr_1fr]">
           <label className="flex flex-col gap-2">
             <span className="text-sm font-bold uppercase tracking-[0.08em]">Afholdelse</span>
             <select
@@ -163,6 +215,38 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
               {sessionSnapshot.sessions.map((examSession) => (
                 <option key={examSession.id} value={examSession.id}>
                   {examSession.title}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-bold uppercase tracking-[0.08em]">Prøveformat</span>
+            <select
+              name="examSetId"
+              defaultValue={snapshot.filters.examSetId}
+              className="min-h-12 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 text-base text-foreground focus-visible:outline-none"
+            >
+              <option value="">Alle</option>
+              {examSetOptions.map((examSet) => (
+                <option key={examSet.id} value={examSet.id}>
+                  {examSet.title}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-bold uppercase tracking-[0.08em]">Instruktør</span>
+            <select
+              name="adminUserId"
+              defaultValue={snapshot.filters.adminUserId}
+              className="min-h-12 rounded-[var(--radius-sm)] border-2 border-border bg-surface px-4 text-base text-foreground focus-visible:outline-none"
+            >
+              <option value="">Alle</option>
+              {instructorOptions.map((instructor) => (
+                <option key={instructor.id} value={instructor.id}>
+                  {instructor.name} · {instructor.email}
                 </option>
               ))}
             </select>

@@ -137,7 +137,7 @@ Det er kun tænkt som fallback, ikke som hovedmetode.
 
 ### Trin 5: Følg status live
 
-Gå til `/admin/status`.
+Gå til den konkrete afholdelse fra `/admin`, eller åbn den direkte på `/admin/sessions/[sessionId]`.
 
 Her kan du løbende se:
 

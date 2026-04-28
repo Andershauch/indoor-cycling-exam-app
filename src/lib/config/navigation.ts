@@ -23,6 +23,10 @@ export const primaryNavigation: NavigationItem[] = [
 
 export const adminNavigationSections: AdminNavigationSection[] = [
   {
+    label: "System",
+    items: [{ href: "/superadmin", label: "Overblik", roles: [AdminRole.SUPER_ADMIN] }],
+  },
+  {
     label: "Afholdelse",
     items: [
       { href: "/admin", label: "Mine prøveafholdelser" },
@@ -34,7 +38,7 @@ export const adminNavigationSections: AdminNavigationSection[] = [
     items: [{ href: "/reports", label: "Samlede rapporter", roles: [AdminRole.SUPER_ADMIN] }],
   },
   {
-    label: "System",
+    label: "Opsætning",
     items: [
       { href: "/questions", label: "Prøveformater", roles: [AdminRole.SUPER_ADMIN] },
       { href: "/admins", label: "Instruktører", roles: [AdminRole.SUPER_ADMIN] },

@@ -190,7 +190,7 @@ model AnswerOption {
 model Invitation {
   id                String             @id @default(cuid())
   examSetId         String
-  examSessionId     String?
+  examSessionId     String
   createdByAdminId  String?
   channel           InvitationChannel
   status            InvitationStatus   @default(CREATED)
@@ -209,7 +209,7 @@ model Invitation {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   examSet           ExamSet            @relation(fields: [examSetId], references: [id], onDelete: Cascade)
-  examSession       ExamSession?       @relation(fields: [examSessionId], references: [id], onDelete: SetNull)
+  examSession       ExamSession        @relation(fields: [examSessionId], references: [id], onDelete: Restrict)
   createdByAdmin    AdminUser?         @relation(fields: [createdByAdminId], references: [id], onDelete: SetNull)
   attempts          ParticipantAttempt[]
 
@@ -221,7 +221,7 @@ model Invitation {
 model ParticipantAttempt {
   id                   String             @id @default(cuid())
   examSetId            String
-  examSessionId        String?
+  examSessionId        String
   invitationId         String?
   status               AttemptStatus      @default(IN_PROGRESS)
   participantName      String?
@@ -238,7 +238,7 @@ model ParticipantAttempt {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   examSet              ExamSet            @relation(fields: [examSetId], references: [id], onDelete: Restrict)
-  examSession          ExamSession?       @relation(fields: [examSessionId], references: [id], onDelete: SetNull)
+  examSession          ExamSession        @relation(fields: [examSessionId], references: [id], onDelete: Restrict)
   invitation           Invitation?        @relation(fields: [invitationId], references: [id], onDelete: SetNull)
   answers              AttemptAnswer[]
 

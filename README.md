@@ -64,6 +64,17 @@ npm run dev
 
 Appen kører herefter på `http://localhost:3000`.
 
+## Faste arbejds-URL'er
+
+- Instruktør/admin: `http://localhost:3000/admin`
+- Konkret prøveafholdelse: `http://localhost:3000/admin/sessions/[sessionId]`
+- Superadmin: `http://localhost:3000/superadmin`
+- Magic link-login: `http://localhost:3000/admin/login`
+
+Superadmin bliver automatisk sendt til `/superadmin`, hvis de åbner `/admin` uden at være i
+instruktør-preview. Den konkrete afholdelse har en fast URL på `/admin/sessions/[sessionId]`, så
+instruktør og superadmin kan åbne samme afviklingsrum direkte.
+
 ## Lokale testbrugere
 
 Følgende lokale login ligger nu i `.env.example`:
@@ -93,6 +104,22 @@ Når du kører `npm run setup:lokal-testdata`, opretter scriptet invitationer ti
 - `npm run import:validate` validerer importfilen
 - `npm run import:exam` importerer den faste prøve
 - `npm run setup:lokal-testdata` opretter lokale testinvitationer
+- `npm run smoke:security` kører sikkerheds-smokecheck
+- `npm run test:e2e:flow` kører det fulde deltagerflow
+- `npm run test:system` kører lint, production build, security-smoke og fuldt Playwright-flow
+
+## Systemtest
+
+Den faste lokale gennemtest er:
+
+```bash
+npm run test:system
+```
+
+Kommandoen kører ESLint, production build med Prisma Client-generering, sikkerheds-smokecheck og
+et Playwright-flow med superadmin-bootstrap, prøveafholdelse, invitation, deltagerbesvarelse og
+resultat. Hvis `PLAYWRIGHT_E2E_SECRET` ikke er sat i shellen, bruger scriptet en lokal test-secret
+kun til denne proces. E2E-helperroutes er slået fra i production.
 
 ## Import og testdata
 

@@ -73,21 +73,6 @@ export function isBootstrapSuperAdminEmail(email: string) {
   return normaliseEmail(email) === getAdminConfig().superAdminEmail;
 }
 
-function getDefaultName(email: string, role: AdminRole) {
-  const config = getAdminConfig();
-
-  if (role === AdminRole.SUPER_ADMIN && normaliseEmail(email) === config.superAdminEmail) {
-    return config.superAdminName;
-  }
-
-  const localPart = email.split("@")[0] ?? "Admin";
-  return localPart
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
-}
-
 function signPayload(payload: string) {
   return createHmac("sha256", getAdminSecret()).update(payload).digest("hex");
 }

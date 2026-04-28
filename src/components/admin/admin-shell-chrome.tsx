@@ -24,6 +24,10 @@ function matchesPathname(pathname: string, href: string) {
     return pathname === "/admin";
   }
 
+  if (href === "/superadmin") {
+    return pathname === "/superadmin";
+  }
+
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -37,6 +41,7 @@ export function AdminShellChrome({
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isSuperAdmin = role === AdminRole.SUPER_ADMIN;
+  const homeHref = isSuperAdmin ? "/superadmin" : "/admin";
 
   const sections = adminNavigationSections
     .map((section) => ({
@@ -120,7 +125,7 @@ export function AdminShellChrome({
         )}
       >
         <div className="slide-grid flex items-center justify-between gap-4 py-4">
-          <Link href="/admin" className="flex items-center gap-3">
+          <Link href={homeHref} className="flex items-center gap-3">
             <BrandLogo size="sm" />
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
@@ -131,14 +136,17 @@ export function AdminShellChrome({
               </p>
             </div>
           </Link>
-          <Button
-            type="button"
-            variant="contrast"
-            size="sm"
-            onClick={() => setIsMenuOpen(true)}
-          >
-            Menu
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {footer ? <div>{footer}</div> : null}
+            <Button
+              type="button"
+              variant="contrast"
+              size="sm"
+              onClick={() => setIsMenuOpen(true)}
+            >
+              Menu
+            </Button>
+          </div>
         </div>
       </div>
 

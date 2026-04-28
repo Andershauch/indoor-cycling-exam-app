@@ -65,7 +65,7 @@ async function createFreshParticipantSession(invitationId: string) {
 
 export async function createAndDispatchInvitation(input: {
   examSetId: string;
-  examSessionId?: string | null;
+  examSessionId: string;
   createdByAdminId?: string | null;
   channel: InvitationChannel;
   recipientName?: string | null;
@@ -73,18 +73,29 @@ export async function createAndDispatchInvitation(input: {
   recipientPhone?: string | null;
 }) {
   const prisma = getPrismaClient();
-  const examSet = await prisma.examSet.findUnique({
-    where: {
-      id: input.examSetId,
-    },
-    select: {
-      id: true,
-      title: true,
-    },
-  });
+  const examSet = (
+    await prisma.examSession.findUnique({
+      where: {
+        id: input.examSessionId,
+      },
+      select: {
+        id: true,
+        examSet: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    })
+  )?.examSet;
 
   if (!examSet) {
-    throw new Error("Den aktive prøve blev ikke fundet.");
+    throw new Error("Prøveformatet for invitationen blev ikke fundet.");
+  }
+
+  if (examSet.id !== input.examSetId) {
+    throw new Error("Prøveafholdelsen matcher ikke det valgte prøveformat.");
   }
 
   if (input.channel === InvitationChannel.EMAIL && !input.recipientEmail?.trim()) {
@@ -98,7 +109,7 @@ export async function createAndDispatchInvitation(input: {
   const invitation = await prisma.invitation.create({
     data: {
       examSetId: examSet.id,
-      examSessionId: input.examSessionId ?? null,
+      examSessionId: input.examSessionId,
       createdByAdminId: input.createdByAdminId ?? null,
       channel: input.channel,
       status: InvitationStatus.CREATED,
@@ -142,18 +153,17 @@ export async function getAdminInvitationsSnapshot(input: {
 } = {}) {
   const prisma = getPrismaClient();
   const examSet = await prisma.examSet.findFirst({
-    where: {
-      isActive: true,
-      ...(input.examSessionId
-        ? {
-            examSessions: {
-              some: {
-                id: input.examSessionId,
-              },
+    where: input.examSessionId
+      ? {
+          examSessions: {
+            some: {
+              id: input.examSessionId,
             },
-          }
-        : {}),
-    },
+          },
+        }
+      : {
+          isActive: true,
+        },
     include: {
       invitations: {
         where: input.examSessionId ? { examSessionId: input.examSessionId } : undefined,
@@ -232,6 +242,12 @@ export async function resolveInvitationLink(token: string) {
   });
 
   if (!invitation) {
+    return {
+      state: "invalid" as const,
+    };
+  }
+
+  if (!invitation.examSessionId) {
     return {
       state: "invalid" as const,
     };

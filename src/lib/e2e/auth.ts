@@ -8,8 +8,8 @@ function getE2ESecret() {
 }
 
 export function assertE2EAccess(secret: string | null) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("E2E helper routes are disabled in production.");
+  if (process.env.VERCEL_ENV === "production") {
+    throw new Error("E2E helper routes are disabled in Vercel production.");
   }
 
   const expectedSecret = getE2ESecret();

@@ -14,3 +14,9 @@ test("protected admin route redirects to login when logged out", async ({ page }
 
   await expect(page).toHaveURL(/\/admin\/login$/);
 });
+
+test("protected superadmin route redirects to login when logged out", async ({ page }) => {
+  await page.goto("/superadmin");
+
+  await expect(page).toHaveURL(/\/admin\/login$/);
+});

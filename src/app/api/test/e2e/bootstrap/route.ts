@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { assertE2EAccess, ensureE2EAdminSession } from "@/lib/e2e/auth";
 import {
   createE2EInvitation,
+  ensureE2EExamSession,
   ensureE2EExamSet,
   resetE2EInvitations,
 } from "@/lib/e2e/seed";
@@ -26,10 +27,16 @@ export async function POST(request: Request) {
       await resetE2EInvitations();
     }
 
+    const examSession = await ensureE2EExamSession({
+      examSetId: examSet.id,
+      adminUserId: adminUser.id,
+    });
+
     const invitation =
       body.participantName && body.participantEmail
         ? await createE2EInvitation({
             examSetId: examSet.id,
+            examSessionId: examSession.id,
             adminUserId: adminUser.id,
             participantName: body.participantName,
             participantEmail: body.participantEmail,
@@ -39,6 +46,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       adminEmail: adminUser.email,
+      examSessionId: examSession.id,
       invitationLink: invitation?.invitationLink ?? null,
     });
   } catch (error) {

@@ -12,6 +12,8 @@ export type ReportFilters = {
   outcome?: "all" | "passed" | "failed";
   status?: "all" | "submitted" | "auto_submitted" | "in_progress";
   examSessionId?: string;
+  examSetId?: string;
+  adminUserId?: string;
 };
 
 type SnapshotScope = {
@@ -38,18 +40,17 @@ export async function getActiveExamAdminSnapshot(scope: SnapshotScope = {}) {
   const attemptWhere = scope.examSessionId ? { examSessionId: scope.examSessionId } : {};
 
   const examSet = await prisma.examSet.findFirst({
-    where: {
-      isActive: true,
-      ...(scope.examSessionId
-        ? {
-            examSessions: {
-              some: {
-                id: scope.examSessionId,
-              },
+    where: scope.examSessionId
+      ? {
+          examSessions: {
+            some: {
+              id: scope.examSessionId,
             },
-          }
-        : {}),
-    },
+          },
+        }
+      : {
+          isActive: true,
+        },
     include: {
       examQuestions: {
         orderBy: {
@@ -324,6 +325,7 @@ export async function getExamSessionAdminSnapshot(input: {
       include: {
         examSet: {
           select: {
+            id: true,
             title: true,
             timeLimitMinutes: true,
             passPercentage: true,
@@ -331,6 +333,7 @@ export async function getExamSessionAdminSnapshot(input: {
         },
         createdByAdmin: {
           select: {
+            id: true,
             name: true,
             email: true,
           },
@@ -380,6 +383,7 @@ export async function getExamSessionAdminSnapshot(input: {
         startsAt: session.startsAt,
         closedAt: session.closedAt,
         createdAt: session.createdAt,
+        examSetId: session.examSet.id,
         examSetTitle: session.examSet.title,
         timeLimitMinutes: session.examSet.timeLimitMinutes,
         passPercentage: session.examSet.passPercentage,
@@ -407,13 +411,22 @@ function normaliseReportFilters(filters?: ReportFilters) {
     outcome: filters?.outcome ?? "all",
     status: filters?.status ?? "all",
     examSessionId: filters?.examSessionId?.trim() ?? "",
+    examSetId: filters?.examSetId?.trim() ?? "",
+    adminUserId: filters?.adminUserId?.trim() ?? "",
   };
 }
 
-function buildAttemptWhereClause(examSetId: string, filters: ReturnType<typeof normaliseReportFilters>) {
+function buildAttemptWhereClause(filters: ReturnType<typeof normaliseReportFilters>) {
   const where: Prisma.ParticipantAttemptWhereInput = {
-    examSetId,
     ...(filters.examSessionId ? { examSessionId: filters.examSessionId } : {}),
+    ...(filters.examSetId ? { examSetId: filters.examSetId } : {}),
+    ...(filters.adminUserId
+      ? {
+          examSession: {
+            createdByAdminId: filters.adminUserId,
+          },
+        }
+      : {}),
   };
 
   if (filters.query) {
@@ -456,48 +469,40 @@ function toScoreNumber(value: { toString(): string } | null | undefined) {
 
 export async function getAdminReportsSnapshot(filters?: ReportFilters) {
   const prisma = getPrismaClient();
-  const examSet = await prisma.examSet.findFirst({
-    where: {
-      isActive: true,
-      ...(filters?.examSessionId
-        ? {
-            examSessions: {
-              some: {
-                id: filters.examSessionId,
-              },
-            },
-          }
-        : {}),
-    },
-    include: {
-      examQuestions: {
-        include: {
-          question: {
-            select: {
-              questionText: true,
-            },
-          },
-        },
-      },
-      attempts: {
-        orderBy: {
-          startedAt: "desc",
-        },
-      },
-    },
-  });
-
-  if (!examSet) {
-    return null;
-  }
-
   const normalisedFilters = normaliseReportFilters(filters);
   const filteredAttempts = await prisma.participantAttempt.findMany({
-    where: buildAttemptWhereClause(examSet.id, normalisedFilters),
+    where: buildAttemptWhereClause(normalisedFilters),
     orderBy: {
       startedAt: "desc",
     },
     include: {
+      examSet: {
+        select: {
+          id: true,
+          title: true,
+          passPercentage: true,
+          timeLimitMinutes: true,
+          examQuestions: {
+            select: {
+              id: true,
+            },
+          },
+        },
+      },
+      examSession: {
+        select: {
+          id: true,
+          title: true,
+          location: true,
+          createdByAdmin: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
       invitation: {
         select: {
           channel: true,
@@ -527,13 +532,17 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
     scoreNumber: toScoreNumber(attempt.scorePercentage),
   }));
   const passedAttempts = attemptsWithOutcome.filter(
-    (attempt) => (attempt.scoreNumber ?? 0) >= examSet.passPercentage,
+    (attempt) => (attempt.scoreNumber ?? 0) >= attempt.examSet.passPercentage,
   );
   const outcomeFilteredAttempts =
     normalisedFilters.outcome === "passed"
-      ? attemptsWithOutcome.filter((attempt) => (attempt.scoreNumber ?? 0) >= examSet.passPercentage)
+      ? attemptsWithOutcome.filter(
+          (attempt) => (attempt.scoreNumber ?? 0) >= attempt.examSet.passPercentage,
+        )
       : normalisedFilters.outcome === "failed"
-        ? attemptsWithOutcome.filter((attempt) => (attempt.scoreNumber ?? 0) < examSet.passPercentage)
+        ? attemptsWithOutcome.filter(
+            (attempt) => (attempt.scoreNumber ?? 0) < attempt.examSet.passPercentage,
+          )
         : filteredAttempts;
   const averageScore =
     attemptsWithOutcome.length > 0
@@ -559,10 +568,35 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
     });
   });
 
-  const hardestQuestions = examSet.examQuestions
+  const hardestQuestionIds = [...failedAnswerCounts.keys()];
+  const failedQuestions =
+    hardestQuestionIds.length > 0
+      ? await prisma.examQuestion.findMany({
+          where: {
+            id: {
+              in: hardestQuestionIds,
+            },
+          },
+          include: {
+            question: {
+              select: {
+                questionText: true,
+              },
+            },
+            examSet: {
+              select: {
+                title: true,
+              },
+            },
+          },
+        })
+      : [];
+
+  const hardestQuestions = failedQuestions
     .map((examQuestion) => ({
       examQuestionId: examQuestion.id,
       position: examQuestion.position,
+      examSetTitle: examQuestion.examSet.title,
       questionText: examQuestion.question.questionText,
       incorrectCount: failedAnswerCounts.get(examQuestion.id) ?? 0,
       totalCompletedAttempts: completedAttempts.length,
@@ -588,35 +622,44 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
     attemptsWithOutcome.length > 0
       ? Number(((passedAttempts.length / attemptsWithOutcome.length) * 100).toFixed(1))
       : null;
+  const selectedExamSet = normalisedFilters.examSetId
+    ? filteredAttempts.find((attempt) => attempt.examSetId === normalisedFilters.examSetId)
+        ?.examSet ?? null
+    : null;
 
   return {
     examSet: {
-      title: examSet.title,
-      passPercentage: examSet.passPercentage,
-      timeLimitMinutes: examSet.timeLimitMinutes,
-      questionCount: examSet.examQuestions.length,
+      title: selectedExamSet?.title ?? "Alle prøveformater",
+      passPercentage: selectedExamSet?.passPercentage ?? null,
+      timeLimitMinutes: selectedExamSet?.timeLimitMinutes ?? null,
+      questionCount: selectedExamSet?.examQuestions.length ?? null,
     },
     attempts: finalAttempts.map((attempt) => {
       const scoreNumber = toScoreNumber(attempt.scorePercentage);
 
       return {
-      id: attempt.id,
-      participantName: attempt.participantName,
-      participantEmail: attempt.participantEmail,
-      participantPhone: attempt.participantPhone,
-      status: attempt.status,
-      correctAnswerCount: attempt.correctAnswerCount,
-      totalQuestionCount: attempt.totalQuestionCount,
-      scorePercentage: scoreNumber,
-      startedAt: attempt.startedAt,
-      submittedAt: attempt.submittedAt,
-      updatedAt: attempt.updatedAt,
-      passed:
-        scoreNumber !== null
-          ? scoreNumber >= examSet.passPercentage
-          : null,
-      invitationChannel: attempt.invitation?.channel ?? null,
-    };
+        id: attempt.id,
+        participantName: attempt.participantName,
+        participantEmail: attempt.participantEmail,
+        participantPhone: attempt.participantPhone,
+        status: attempt.status,
+        correctAnswerCount: attempt.correctAnswerCount,
+        totalQuestionCount: attempt.totalQuestionCount,
+        scorePercentage: scoreNumber,
+        startedAt: attempt.startedAt,
+        submittedAt: attempt.submittedAt,
+        updatedAt: attempt.updatedAt,
+        passed:
+          scoreNumber !== null
+            ? scoreNumber >= attempt.examSet.passPercentage
+            : null,
+        invitationChannel: attempt.invitation?.channel ?? null,
+        examSetTitle: attempt.examSet.title,
+        examSessionTitle: attempt.examSession?.title ?? "Ingen afholdelse",
+        examSessionLocation: attempt.examSession?.location ?? null,
+        instructorName: attempt.examSession?.createdByAdmin?.name ?? null,
+        instructorEmail: attempt.examSession?.createdByAdmin?.email ?? null,
+      };
     }),
     stats: {
       totalAttempts: filteredAttempts.length,
@@ -636,6 +679,10 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
     filters: normalisedFilters,
     exportFields: [
       "attemptId",
+      "examSetTitle",
+      "examSessionTitle",
+      "instructorName",
+      "instructorEmail",
       "participantName",
       "participantEmail",
       "participantPhone",
@@ -672,6 +719,10 @@ export async function buildAdminReportsCsv(filters?: ReportFilters) {
     ...snapshot.attempts.map((attempt) =>
       [
         attempt.id,
+        attempt.examSetTitle,
+        attempt.examSessionTitle,
+        attempt.instructorName ?? "",
+        attempt.instructorEmail ?? "",
         attempt.participantName ?? "",
         attempt.participantEmail ?? "",
         attempt.participantPhone ?? "",

@@ -93,7 +93,7 @@ export default async function AdminStatusPage() {
     actions: (
       <div className="flex flex-wrap justify-end gap-2">
         <Button
-          href={`/admin?view=instructor&session=${examSession.id}`}
+          href={`/admin/sessions/${examSession.id}?view=instructor`}
           variant="secondary"
           size="sm"
         >

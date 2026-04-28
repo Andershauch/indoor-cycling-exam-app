@@ -1,4 +1,9 @@
-import { InvitationChannel, InvitationStatus, Prisma } from "@prisma/client";
+import {
+  ExamSessionStatus,
+  InvitationChannel,
+  InvitationStatus,
+  Prisma,
+} from "@prisma/client";
 
 import { getPrismaClient } from "@/lib/db/prisma";
 import { getAppEnv } from "@/lib/config/app-env";
@@ -6,6 +11,7 @@ import { generateInvitationToken } from "@/lib/invitations/token";
 
 const EXAM_SLUG = "playwright-e2e-flow";
 const QUESTION_PREFIX = "playwright-e2e";
+const SESSION_TITLE_PREFIX = "Playwright E2E afholdelse";
 
 type SeedQuestion = {
   externalKey: string;
@@ -188,6 +194,7 @@ export async function ensureE2EExamSet(adminUserId: string) {
 
 export async function createE2EInvitation(input: {
   examSetId: string;
+  examSessionId: string;
   adminUserId: string;
   participantName: string;
   participantEmail: string;
@@ -195,6 +202,7 @@ export async function createE2EInvitation(input: {
   const invitation = await getPrismaClient().invitation.create({
     data: {
       examSetId: input.examSetId,
+      examSessionId: input.examSessionId,
       createdByAdminId: input.adminUserId,
       channel: InvitationChannel.EMAIL,
       status: InvitationStatus.SENT,
@@ -210,6 +218,25 @@ export async function createE2EInvitation(input: {
     invitationId: invitation.id,
     invitationLink: `${getAppEnv().appUrl}/invite/${invitation.token}`,
   };
+}
+
+export async function ensureE2EExamSession(input: {
+  examSetId: string;
+  adminUserId: string;
+}) {
+  const prisma = getPrismaClient();
+  const title = `${SESSION_TITLE_PREFIX} ${new Date().toISOString().slice(0, 10)}`;
+
+  return prisma.examSession.create({
+    data: {
+      examSetId: input.examSetId,
+      createdByAdminId: input.adminUserId,
+      title,
+      location: "Automatisk E2E",
+      status: ExamSessionStatus.ACTIVE,
+      startsAt: new Date(),
+    },
+  });
 }
 
 export async function resetE2EInvitations() {
@@ -237,22 +264,38 @@ export async function resetE2EInvitations() {
     },
   });
 
-  if (invitations.length === 0) {
-    return;
+  if (invitations.length > 0) {
+    await prisma.participantAttempt.deleteMany({
+      where: {
+        invitationId: {
+          in: invitations.map((invitation) => invitation.id),
+        },
+      },
+    });
+
+    await prisma.invitation.deleteMany({
+      where: {
+        id: {
+          in: invitations.map((invitation) => invitation.id),
+        },
+      },
+    });
   }
 
   await prisma.participantAttempt.deleteMany({
     where: {
-      invitationId: {
-        in: invitations.map((invitation) => invitation.id),
+      examSession: {
+        title: {
+          startsWith: SESSION_TITLE_PREFIX,
+        },
       },
     },
   });
 
-  await prisma.invitation.deleteMany({
+  await prisma.examSession.deleteMany({
     where: {
-      id: {
-        in: invitations.map((invitation) => invitation.id),
+      title: {
+        startsWith: SESSION_TITLE_PREFIX,
       },
     },
   });

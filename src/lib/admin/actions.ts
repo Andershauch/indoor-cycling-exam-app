@@ -24,7 +24,7 @@ import { createAndDispatchInvitation } from "@/lib/invitations/service";
 const ADMINS_ROUTE = "/admins" as Parameters<typeof redirect>[0];
 type RedirectTarget = Parameters<typeof redirect>[0];
 
-function getReturnTo(formData: FormData, fallback = "/invitations"): RedirectTarget {
+function getReturnTo(formData: FormData, fallback = "/admin"): RedirectTarget {
   const returnTo = String(formData.get("returnTo") ?? "").trim();
 
   if (!returnTo.startsWith("/admin")) {
@@ -73,56 +73,38 @@ async function logAdminAction(input: {
 async function getExamTargetForInvitation(input: {
   adminUserId: string;
   role: AdminRole;
-  examSessionId?: string | null;
+  examSessionId: string | null;
 }) {
   const prisma = getPrismaClient();
 
-  if (input.examSessionId) {
-    const examSession = await prisma.examSession.findFirst({
-      where: {
-        id: input.examSessionId,
-        ...(input.role === AdminRole.SUPER_ADMIN
-          ? {}
-          : {
-              createdByAdminId: input.adminUserId,
-            }),
-      },
-      select: {
-        id: true,
-        examSetId: true,
-        title: true,
-      },
-    });
-
-    if (!examSession) {
-      throw new Error("Prøveafholdelsen blev ikke fundet.");
-    }
-
-    return {
-      examSetId: examSession.examSetId,
-      examSessionId: examSession.id,
-      targetLabel: examSession.title,
-    };
+  if (!input.examSessionId) {
+    throw new Error("Invitationer skal oprettes fra en konkret prøveafholdelse.");
   }
 
-  const examSet = await prisma.examSet.findFirst({
+  const examSession = await prisma.examSession.findFirst({
     where: {
-      isActive: true,
+      id: input.examSessionId,
+      ...(input.role === AdminRole.SUPER_ADMIN
+        ? {}
+        : {
+            createdByAdminId: input.adminUserId,
+          }),
     },
     select: {
       id: true,
+      examSetId: true,
       title: true,
     },
   });
 
-  if (!examSet) {
-    throw new Error("Der findes ingen aktiv prøve.");
+  if (!examSession) {
+    throw new Error("Prøveafholdelsen blev ikke fundet.");
   }
 
   return {
-    examSetId: examSet.id,
-    examSessionId: null,
-    targetLabel: examSet.title,
+    examSetId: examSession.examSetId,
+    examSessionId: examSession.id,
+    targetLabel: examSession.title,
   };
 }
 
@@ -412,7 +394,7 @@ export async function createExamSessionAction(formData: FormData) {
   });
 
   revalidatePath("/admin");
-  redirect(`/admin${view === "instructor" ? "?view=instructor&" : "?"}session=${examSession.id}`);
+  redirect(`/admin/sessions/${examSession.id}${view === "instructor" ? "?view=instructor" : ""}`);
 }
 
 export async function closeExamSessionAction(formData: FormData) {
@@ -782,6 +764,15 @@ export async function createInvitationAction(formData: FormData) {
     adminUserId: session.id,
     role: session.role,
     examSessionId,
+  }).catch((error) => {
+    redirect(
+      appendRedirectParams(returnTo, {
+        createError:
+          error instanceof Error
+            ? error.message
+            : "Invitationen skal knyttes til en prøveafholdelse.",
+      }),
+    );
   });
 
   const channelValue = String(formData.get("channel") ?? "").trim().toUpperCase();
@@ -818,8 +809,8 @@ export async function createInvitationAction(formData: FormData) {
   await logAdminAction({
     adminUserId: session.id,
     action: "INVITATION_CREATED",
-    targetType: target.examSessionId ? "exam_session" : "exam_set",
-    targetId: target.examSessionId ?? target.examSetId,
+    targetType: "exam_session",
+    targetId: target.examSessionId,
     targetLabel: recipientEmail || recipientPhone || recipientName || "invitation",
     metadata: {
       channel: channelValue,
@@ -847,7 +838,10 @@ export async function createBatchInvitationsAction(formData: FormData) {
   }).catch((error) => {
     redirect(
       appendRedirectParams(returnTo, {
-        batchError: error instanceof Error ? error.message : "Ingen aktiv prøve",
+        batchError:
+          error instanceof Error
+            ? error.message
+            : "Invitationer skal oprettes fra en konkret prøveafholdelse.",
       }),
     );
   });
@@ -892,8 +886,8 @@ export async function createBatchInvitationsAction(formData: FormData) {
     await logAdminAction({
       adminUserId: session.id,
       action: "INVITATION_BATCH_PROCESSED",
-      targetType: target.examSessionId ? "exam_session" : "exam_set",
-      targetId: target.examSessionId ?? target.examSetId,
+      targetType: "exam_session",
+      targetId: target.examSessionId,
       targetLabel: upload.name,
       metadata: {
         createdCount,

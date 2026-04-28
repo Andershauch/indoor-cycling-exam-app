@@ -2,7 +2,12 @@ import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { InvitationChannel, InvitationStatus, PrismaClient } from "@prisma/client";
+import {
+  ExamSessionStatus,
+  InvitationChannel,
+  InvitationStatus,
+  PrismaClient,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -54,7 +59,7 @@ async function main() {
     throw new Error("ADMIN_LOGIN_EMAIL mangler. Kopier .env.example til .env og prover igen.");
   }
 
-  await prisma.adminUser.upsert({
+  const adminUser = await prisma.adminUser.upsert({
     where: {
       email: configuredAdminEmail,
     },
@@ -65,6 +70,30 @@ async function main() {
     create: {
       email: configuredAdminEmail,
       name: configuredAdminName,
+    },
+  });
+
+  const examSession = await prisma.examSession.upsert({
+    where: {
+      id: "local-test-session",
+    },
+    update: {
+      examSetId: examSet.id,
+      createdByAdminId: adminUser.id,
+      title: "Lokal testafholdelse",
+      location: "Lokal udvikling",
+      status: ExamSessionStatus.ACTIVE,
+      startsAt: new Date(),
+      closedAt: null,
+    },
+    create: {
+      id: "local-test-session",
+      examSetId: examSet.id,
+      createdByAdminId: adminUser.id,
+      title: "Lokal testafholdelse",
+      location: "Lokal udvikling",
+      status: ExamSessionStatus.ACTIVE,
+      startsAt: new Date(),
     },
   });
 
@@ -79,6 +108,7 @@ async function main() {
     const existingInvitation = await prisma.invitation.findFirst({
       where: {
         examSetId: examSet.id,
+        examSessionId: examSession.id,
         channel,
         recipientEmail: participant.email?.trim() || null,
         recipientPhone: participant.phone?.trim() || null,
@@ -95,6 +125,7 @@ async function main() {
           },
           data: {
             recipientName: participant.name?.trim() || null,
+            examSessionId: examSession.id,
             recipientEmail: participant.email?.trim() || null,
             recipientPhone: participant.phone?.trim() || null,
             status: InvitationStatus.CREATED,
@@ -108,6 +139,7 @@ async function main() {
       : await prisma.invitation.create({
           data: {
             examSetId: examSet.id,
+            examSessionId: examSession.id,
             channel,
             status: InvitationStatus.CREATED,
             token: generateInvitationToken(),
@@ -128,6 +160,7 @@ async function main() {
 
   console.log(`Fixture indlaest fra ${resolvedPath}`);
   console.log(`Aktiv prove: ${examSet.title}`);
+  console.log(`Prøveafholdelse: ${examSession.title}`);
   console.log(`Admin-login: ${configuredAdminEmail}`);
   console.log("Lokale testinvitationer:");
 

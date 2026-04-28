@@ -81,7 +81,7 @@ UI-principper:
 Admin:
 
 - Mine prøveafholdelser
-- Aktuel afholdelse
+- Aktuel afholdelse (`/admin/sessions/[sessionId]`)
 - Resultater
 
 SuperAdmin:

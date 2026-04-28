@@ -124,7 +124,7 @@ async function getExamSetForAttempt(examSetId?: string | null) {
 
 export async function createAttempt(input: {
   examSetId?: string | null;
-  examSessionId?: string | null;
+  examSessionId: string;
   invitationId: string;
   participantName?: string | null;
   participantEmail?: string | null;
@@ -147,7 +147,7 @@ export async function createAttempt(input: {
     const createdAttempt = await tx.participantAttempt.create({
       data: {
         examSetId: examSet.id,
-        examSessionId: input.examSessionId ?? null,
+        examSessionId: input.examSessionId,
         invitationId: input.invitationId,
         participantName: input.participantName?.trim() || null,
         participantEmail: input.participantEmail?.trim() || null,

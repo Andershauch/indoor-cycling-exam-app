@@ -9,6 +9,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const csv = await buildAdminReportsCsv({
     examSessionId: searchParams.get("examSessionId") ?? undefined,
+    examSetId: searchParams.get("examSetId") ?? undefined,
+    adminUserId: searchParams.get("adminUserId") ?? undefined,
     query: searchParams.get("query") ?? undefined,
     outcome:
       (searchParams.get("outcome") as "all" | "passed" | "failed" | null) ?? undefined,
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
   });
 
   if (!csv) {
-    return new NextResponse("Ingen aktiv prøve.", { status: 404 });
+    return new NextResponse("Ingen rapportdata.", { status: 404 });
   }
 
   return new NextResponse(csv, {
