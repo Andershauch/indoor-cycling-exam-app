@@ -35,6 +35,21 @@ const hardestQuestionColumns = [
   { key: "rate", label: "Fejlrate", align: "right" as const },
 ];
 
+const sessionSummaryColumns = [
+  { key: "session", label: "Afholdelse" },
+  { key: "instructor", label: "Instruktør" },
+  { key: "numbers", label: "Tal" },
+  { key: "score", label: "Score" },
+  { key: "actions", label: "Handling", align: "right" as const },
+];
+
+const instructorSummaryColumns = [
+  { key: "instructor", label: "Instruktør" },
+  { key: "sessions", label: "Afholdelser", align: "right" as const },
+  { key: "completed", label: "Afleveret", align: "right" as const },
+  { key: "score", label: "Score", align: "right" as const },
+];
+
 function formatDate(value: Date | null) {
   if (!value) {
     return "Ikke afleveret";
@@ -54,6 +69,19 @@ function formatStatus(status: string) {
       return "Auto-afleveret";
     default:
       return "I gang";
+  }
+}
+
+function formatSessionStatus(status: string) {
+  switch (status) {
+    case "ACTIVE":
+      return "Aktiv";
+    case "CLOSED":
+      return "Afsluttet";
+    case "DRAFT":
+      return "Kladde";
+    default:
+      return status;
   }
 }
 
@@ -155,6 +183,82 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     ),
     wrong: String(question.incorrectCount),
     rate: `${Math.round(question.incorrectRate)}%`,
+  }));
+  const sessionSummaryRows = snapshot.sessionSummaries.map((examSession) => ({
+    session: (
+      <div className="space-y-1">
+        <p className="font-bold">{examSession.title}</p>
+        <p className="text-xs text-muted-foreground">
+          {formatSessionStatus(examSession.status)} · {formatDate(examSession.startsAt)}
+        </p>
+      </div>
+    ),
+    instructor: (
+      <div className="space-y-1">
+        <p className="font-bold">{examSession.instructorName ?? "Ukendt"}</p>
+        <p className="text-xs text-muted-foreground">
+          {examSession.instructorEmail ?? "Ingen e-mail"}
+        </p>
+      </div>
+    ),
+    numbers: (
+      <div className="space-y-1 text-xs text-muted-foreground">
+        <p>{examSession.totalAttempts} forsøg</p>
+        <p>{examSession.completedAttempts} afleveret</p>
+        <p>{examSession.passedAttempts} bestået</p>
+      </div>
+    ),
+    score: (
+      <div className="space-y-1">
+        <p className="font-bold">
+          {examSession.passRate === null ? "Afventer" : `${Math.round(examSession.passRate)}% bestået`}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {examSession.averageScore === null
+            ? "Intet gennemsnit"
+            : `${Math.round(examSession.averageScore)}% i snit`}
+        </p>
+      </div>
+    ),
+    actions:
+      examSession.id === "missing-session" ? (
+        <span className="text-xs text-muted-foreground">Ingen handling</span>
+      ) : (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            href={`/admin/sessions/${examSession.id}?view=instructor`}
+            variant="secondary"
+            size="sm"
+          >
+            Åbn
+          </Button>
+          <Button href={`/reports?examSessionId=${examSession.id}`} variant="secondary" size="sm">
+            Filtrer
+          </Button>
+        </div>
+      ),
+  }));
+  const instructorSummaryRows = snapshot.instructorSummaries.map((instructor) => ({
+    instructor: (
+      <div className="space-y-1">
+        <p className="font-bold">{instructor.name}</p>
+        <p className="text-xs text-muted-foreground">{instructor.email}</p>
+      </div>
+    ),
+    sessions: String(instructor.sessionCount),
+    completed: `${instructor.completedAttempts}/${instructor.totalAttempts}`,
+    score: (
+      <div className="space-y-1">
+        <p className="font-bold">
+          {instructor.passRate === null ? "Afventer" : `${Math.round(instructor.passRate)}%`}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {instructor.averageScore === null
+            ? "Intet snit"
+            : `${Math.round(instructor.averageScore)}% snit`}
+        </p>
+      </div>
+    ),
   }));
 
   const csvParams = new URLSearchParams();
@@ -311,6 +415,43 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         />
         <AdminStatCard label="Bestået" value={String(snapshot.stats.passedAttempts)} />
         <AdminStatCard label="Auto" value={String(snapshot.stats.autoSubmittedAttempts)} />
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card
+          title="Afholdelser på tværs"
+          eyebrow="Sammenligning"
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
+          className="space-y-4"
+        >
+          <p className="text-sm leading-6 text-muted-foreground">
+            Brug oversigten til at sammenligne hold, instruktører og resultater før du åbner den
+            detaljerede deltagerliste.
+          </p>
+          <AdminTable
+            caption="Afholdelser på tværs"
+            columns={sessionSummaryColumns}
+            rows={sessionSummaryRows}
+            emptyMessage="Ingen afholdelser matcher det valgte filter."
+          />
+        </Card>
+
+        <Card
+          title="Instruktører"
+          eyebrow="Opsamling"
+          titleClassName="text-[clamp(1.9rem,3.8vw,2.7rem)] leading-[0.97] tracking-[-0.03em]"
+          className="space-y-4"
+        >
+          <p className="text-sm leading-6 text-muted-foreground">
+            Samlet billede af afholdelser, afleveringer og score pr. instruktør.
+          </p>
+          <AdminTable
+            caption="Instruktører"
+            columns={instructorSummaryColumns}
+            rows={instructorSummaryRows}
+            emptyMessage="Ingen instruktørdata matcher det valgte filter."
+          />
+        </Card>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">

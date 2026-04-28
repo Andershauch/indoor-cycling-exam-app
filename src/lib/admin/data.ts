@@ -494,6 +494,9 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
           id: true,
           title: true,
           location: true,
+          status: true,
+          startsAt: true,
+          closedAt: true,
           createdByAdmin: {
             select: {
               id: true,
@@ -626,6 +629,168 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
     ? filteredAttempts.find((attempt) => attempt.examSetId === normalisedFilters.examSetId)
         ?.examSet ?? null
     : null;
+  const sessionSummaryMap = new Map<
+    string,
+    {
+      id: string;
+      title: string;
+      status: string;
+      startsAt: Date | null;
+      closedAt: Date | null;
+      instructorName: string | null;
+      instructorEmail: string | null;
+      totalAttempts: number;
+      completedAttempts: number;
+      passedAttempts: number;
+      scoreTotal: number;
+      scoredAttempts: number;
+    }
+  >();
+  const instructorSummaryMap = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      email: string;
+      sessionIds: Set<string>;
+      totalAttempts: number;
+      completedAttempts: number;
+      passedAttempts: number;
+      scoreTotal: number;
+      scoredAttempts: number;
+    }
+  >();
+
+  filteredAttempts.forEach((attempt) => {
+    const scoreNumber = toScoreNumber(attempt.scorePercentage);
+    const isCompleted =
+      attempt.status === AttemptStatus.SUBMITTED ||
+      attempt.status === AttemptStatus.AUTO_SUBMITTED;
+    const isPassed = scoreNumber !== null && scoreNumber >= attempt.examSet.passPercentage;
+    const sessionKey = attempt.examSession?.id ?? "missing-session";
+    const instructorKey = attempt.examSession?.createdByAdmin?.id ?? "missing-instructor";
+
+    const sessionSummary =
+      sessionSummaryMap.get(sessionKey) ??
+      {
+        id: sessionKey,
+        title: attempt.examSession?.title ?? "Ingen afholdelse",
+        status: attempt.examSession?.status ?? "Ukendt",
+        startsAt: attempt.examSession?.startsAt ?? null,
+        closedAt: attempt.examSession?.closedAt ?? null,
+        instructorName: attempt.examSession?.createdByAdmin?.name ?? null,
+        instructorEmail: attempt.examSession?.createdByAdmin?.email ?? null,
+        totalAttempts: 0,
+        completedAttempts: 0,
+        passedAttempts: 0,
+        scoreTotal: 0,
+        scoredAttempts: 0,
+      };
+
+    sessionSummary.totalAttempts += 1;
+
+    if (isCompleted) {
+      sessionSummary.completedAttempts += 1;
+    }
+
+    if (isPassed) {
+      sessionSummary.passedAttempts += 1;
+    }
+
+    if (scoreNumber !== null) {
+      sessionSummary.scoreTotal += scoreNumber;
+      sessionSummary.scoredAttempts += 1;
+    }
+
+    sessionSummaryMap.set(sessionKey, sessionSummary);
+
+    const instructorSummary =
+      instructorSummaryMap.get(instructorKey) ??
+      {
+        id: instructorKey,
+        name: attempt.examSession?.createdByAdmin?.name ?? "Ukendt instruktør",
+        email: attempt.examSession?.createdByAdmin?.email ?? "Ingen e-mail",
+        sessionIds: new Set<string>(),
+        totalAttempts: 0,
+        completedAttempts: 0,
+        passedAttempts: 0,
+        scoreTotal: 0,
+        scoredAttempts: 0,
+      };
+
+    instructorSummary.sessionIds.add(sessionKey);
+    instructorSummary.totalAttempts += 1;
+
+    if (isCompleted) {
+      instructorSummary.completedAttempts += 1;
+    }
+
+    if (isPassed) {
+      instructorSummary.passedAttempts += 1;
+    }
+
+    if (scoreNumber !== null) {
+      instructorSummary.scoreTotal += scoreNumber;
+      instructorSummary.scoredAttempts += 1;
+    }
+
+    instructorSummaryMap.set(instructorKey, instructorSummary);
+  });
+
+  const sessionSummaries = [...sessionSummaryMap.values()]
+    .map((summary) => ({
+      id: summary.id,
+      title: summary.title,
+      status: summary.status,
+      startsAt: summary.startsAt,
+      closedAt: summary.closedAt,
+      instructorName: summary.instructorName,
+      instructorEmail: summary.instructorEmail,
+      totalAttempts: summary.totalAttempts,
+      completedAttempts: summary.completedAttempts,
+      passedAttempts: summary.passedAttempts,
+      passRate:
+        summary.completedAttempts > 0
+          ? Number(((summary.passedAttempts / summary.completedAttempts) * 100).toFixed(1))
+          : null,
+      averageScore:
+        summary.scoredAttempts > 0
+          ? Number((summary.scoreTotal / summary.scoredAttempts).toFixed(1))
+          : null,
+    }))
+    .sort((left, right) => {
+      if (right.completedAttempts !== left.completedAttempts) {
+        return right.completedAttempts - left.completedAttempts;
+      }
+
+      return left.title.localeCompare(right.title, "da");
+    });
+
+  const instructorSummaries = [...instructorSummaryMap.values()]
+    .map((summary) => ({
+      id: summary.id,
+      name: summary.name,
+      email: summary.email,
+      sessionCount: summary.sessionIds.size,
+      totalAttempts: summary.totalAttempts,
+      completedAttempts: summary.completedAttempts,
+      passedAttempts: summary.passedAttempts,
+      passRate:
+        summary.completedAttempts > 0
+          ? Number(((summary.passedAttempts / summary.completedAttempts) * 100).toFixed(1))
+          : null,
+      averageScore:
+        summary.scoredAttempts > 0
+          ? Number((summary.scoreTotal / summary.scoredAttempts).toFixed(1))
+          : null,
+    }))
+    .sort((left, right) => {
+      if (right.completedAttempts !== left.completedAttempts) {
+        return right.completedAttempts - left.completedAttempts;
+      }
+
+      return left.name.localeCompare(right.name, "da");
+    });
 
   return {
     examSet: {
@@ -675,6 +840,8 @@ export async function getAdminReportsSnapshot(filters?: ReportFilters) {
       averageScore,
       passRate,
     },
+    sessionSummaries,
+    instructorSummaries,
     hardestQuestions,
     filters: normalisedFilters,
     exportFields: [

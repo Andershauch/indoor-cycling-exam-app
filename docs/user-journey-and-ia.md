@@ -104,4 +104,6 @@ SuperAdmin:
    er session-bundne, men ældre hjælpetekster og enkelte fallback-routes bør stadig gennemgås.
 4. Gør adminflowet "mine prøveafholdelser" frem for "aktiv prøve". Delvist gennemført:
    `/admin` er afholdelsesoverblik, og `/admin/sessions/[sessionId]` er instruktørens arbejdsrum.
-5. Udvid superadminrapporter til at dække alle prøveafholdelser. Næste større skridt.
+5. Udvid superadminrapporter til at dække alle prøveafholdelser. Gennemført i første version:
+   rapporter kan filtreres på afholdelse, prøveformat og instruktør og viser nu både
+   afholdelses- og instruktøropsamlinger på tværs.
