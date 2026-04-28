@@ -11,8 +11,9 @@ datamodel og navigation, så systemet ikke blander deltager-, instruktør- og su
 - Forsøg: En deltagers faktiske besvarelse og resultat.
 - Rapport: Resultater og statistik for en prøveafholdelse eller på tværs af prøveafholdelser.
 
-Den nuværende datamodel bruger primært `ExamSet` som både prøveformat og aktiv prøve. Næste
-datamodeltrin bør derfor adskille prøveformat fra prøveafholdelse.
+Datamodellen har nu `ExamSession` som konkret prøveafholdelse, mens `ExamSet` fortsat fungerer som
+prøveformat. Næste oprydning bør derfor handle om at flytte de sidste UI- og rapporteringsflader
+væk fra "aktiv prøve"-tænkningen og ind i tydelige afholdelsesflows.
 
 ## Rolle 1: Slutbruger
 
@@ -94,8 +95,13 @@ SuperAdmin:
 
 ## Implementeringsrækkefølge
 
-1. Ryd UI og navigation op i de tre rolleflows.
-2. Indfør datamodel for prøveafholdelser.
-3. Flyt invitationer og forsøg fra prøveformat til prøveafholdelse.
-4. Gør adminflowet "mine prøveafholdelser" frem for "aktiv prøve".
-5. Udvid superadminrapporter til at dække alle prøveafholdelser.
+1. Ryd UI og navigation op i de tre rolleflows. Delvist gennemført: instruktør-navigationen peger
+   nu på "Mine prøveafholdelser", superadmin har egen systemnavigation, og løse invitationer sender
+   instruktøren tilbage til afholdelsesoverblikket.
+2. Indfør datamodel for prøveafholdelser. Gennemført: `ExamSession` findes og bruges af
+   invitationer, forsøg og adminflow.
+3. Flyt invitationer og forsøg fra prøveformat til prøveafholdelse. Delvist gennemført: nye flows
+   er session-bundne, men ældre hjælpetekster og enkelte fallback-routes bør stadig gennemgås.
+4. Gør adminflowet "mine prøveafholdelser" frem for "aktiv prøve". Delvist gennemført:
+   `/admin` er afholdelsesoverblik, og `/admin/sessions/[sessionId]` er instruktørens arbejdsrum.
+5. Udvid superadminrapporter til at dække alle prøveafholdelser. Næste større skridt.

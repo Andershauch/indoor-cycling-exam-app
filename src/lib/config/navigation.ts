@@ -27,9 +27,9 @@ export const adminNavigationSections: AdminNavigationSection[] = [
     items: [{ href: "/superadmin", label: "Overblik", roles: [AdminRole.SUPER_ADMIN] }],
   },
   {
-    label: "Afholdelse",
+    label: "Afholdelser",
     items: [
-      { href: "/admin", label: "Mine prøveafholdelser" },
+      { href: "/admin", label: "Mine prøveafholdelser", roles: [AdminRole.EDITOR] },
       { href: "/admin/status", label: "Prøveafholdelser", roles: [AdminRole.SUPER_ADMIN] },
     ],
   },

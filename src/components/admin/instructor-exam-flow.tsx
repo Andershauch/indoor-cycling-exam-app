@@ -421,7 +421,16 @@ export function InstructorExamFlow({
                 {params.closeError}
               </p>
             ) : null}
-            <Button href="/reports/export" variant="secondary" size="lg" className="w-full">
+            <Button
+              href={
+                examSession
+                  ? `/reports/export?examSessionId=${examSession.id}`
+                  : "/reports/export"
+              }
+              variant="secondary"
+              size="lg"
+              className="w-full"
+            >
               Eksporter CSV
             </Button>
             {examSession ? (

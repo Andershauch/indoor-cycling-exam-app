@@ -21,7 +21,7 @@ type AdminShellChromeProps = {
 
 function matchesPathname(pathname: string, href: string) {
   if (href === "/admin") {
-    return pathname === "/admin";
+    return pathname === "/admin" || pathname.startsWith("/admin/sessions/");
   }
 
   if (href === "/superadmin") {
