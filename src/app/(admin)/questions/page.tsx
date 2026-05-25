@@ -23,6 +23,7 @@ export const dynamic = "force-dynamic";
 type QuestionsPageProps = {
   searchParams: Promise<{
     edit?: string;
+    editError?: string;
   }>;
 };
 
@@ -53,7 +54,7 @@ function formatAttemptStatus(status: string) {
 export default async function QuestionsPage({ searchParams }: QuestionsPageProps) {
   await requireAdminSession(AdminRole.SUPER_ADMIN);
 
-  const [{ edit }, snapshot] = await Promise.all([
+  const [{ edit, editError }, snapshot] = await Promise.all([
     searchParams,
     getActiveExamAdminSnapshot(),
   ]);
@@ -196,6 +197,12 @@ export default async function QuestionsPage({ searchParams }: QuestionsPageProps
           helper="Gennemsnit af afleverede forsøg."
         />
       </section>
+
+      {editError ? (
+        <Card tone="strong" title="Fejl ved opdatering" eyebrow="Fejl">
+          <p className="text-base leading-7 text-foreground">{editError}</p>
+        </Card>
+      ) : null}
 
       {questionsLocked ? (
         <Card tone="strong" title="Prøveformatet er låst" eyebrow="Databeskyttelse">

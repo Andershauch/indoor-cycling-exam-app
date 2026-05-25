@@ -522,6 +522,7 @@ export async function createQuestionAction(formData: FormData) {
 }
 
 export async function updateQuestionAction(formData: FormData) {
+  try {
   const session = await requireAdminSession(AdminRole.SUPER_ADMIN);
 
   const prisma = getPrismaClient();
@@ -614,8 +615,21 @@ export async function updateQuestionAction(formData: FormData) {
     targetLabel: payload.externalKey,
   });
 
-  revalidatePath("/admin");
-  redirect("/admin");
+  revalidatePath("/questions");
+  redirect("/questions");
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "digest" in error &&
+      typeof (error as { digest: unknown }).digest === "string" &&
+      (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    redirect(`/questions?editError=${encodeURIComponent(message)}`);
+  }
 }
 
 export async function deleteQuestionAction(formData: FormData) {
