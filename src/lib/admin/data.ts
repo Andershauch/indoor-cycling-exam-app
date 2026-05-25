@@ -920,7 +920,6 @@ export function getQuestionFormDefaults() {
       { label: "A", text: "" },
       { label: "B", text: "" },
       { label: "C", text: "" },
-      { label: "D", text: "" },
     ],
     correctOptionLabel: "A",
   };
@@ -933,28 +932,17 @@ export function buildQuestionFormState(question: {
   explanation: string | null;
   options: Array<{ label: string; text: string; isCorrect: boolean }>;
 }) {
-  const paddedOptions = [...question.options];
-
-  while (paddedOptions.length < 4) {
-    const nextLabel = String.fromCharCode(65 + paddedOptions.length);
-    paddedOptions.push({
-      label: nextLabel,
-      text: "",
-      isCorrect: false,
-    });
-  }
-
   return {
     externalKey: question.externalKey,
     category: question.category ?? "",
     questionText: question.questionText,
     explanation: question.explanation ?? "",
-    options: paddedOptions.map((option) => ({
+    options: question.options.map((option) => ({
       label: option.label,
       text: option.text,
     })),
     correctOptionLabel:
-      question.options.find((option) => option.isCorrect)?.label ?? paddedOptions[0]?.label ?? "A",
+      question.options.find((option) => option.isCorrect)?.label ?? question.options[0]?.label ?? "A",
   };
 }
 
