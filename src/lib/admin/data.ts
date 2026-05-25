@@ -964,7 +964,7 @@ export function parseQuestionFormData(formData: FormData) {
   const options: QuestionFormOption[] = rawLabels.flatMap((label, index) => {
     const text = rawTexts[index] ?? "";
 
-    if (!label && !text) {
+    if (!label || !text) {
       return [];
     }
 

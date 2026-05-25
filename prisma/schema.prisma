@@ -39,6 +39,16 @@ enum ExamSessionStatus {
   CLOSED
 }
 
+enum ScanRunStatus {
+  SUCCESS
+  FAILED
+}
+
+enum TrackIncidentStatus {
+  OPEN
+  RESOLVED
+}
+
 model AdminUser {
   id             String       @id @default(cuid())
   email          String       @unique
@@ -264,4 +274,95 @@ model AttemptAnswer {
   @@unique([attemptId, examQuestionId])
   @@index([selectedOptionId])
   @@index([examQuestionId])
+}
+
+model SpotifyWatcherUser {
+  id             String             @id @default(cuid())
+  spotifyUserId  String             @unique
+  displayName    String?
+  email          String?
+  country        String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  auth           SpotifyAuth?
+  playlists      SpotifyPlaylist[]
+  scanRuns       SpotifyScanRun[]
+  incidents      SpotifyTrackIncident[]
+}
+
+model SpotifyAuth {
+  id                      String             @id @default(cuid())
+  userId                  String             @unique
+  accessTokenEncrypted    String
+  refreshTokenEncrypted   String
+  tokenType               String?
+  scope                   String?
+  expiresAt               DateTime
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  user                    SpotifyWatcherUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SpotifyPlaylist {
+  id                String             @id @default(cuid())
+  userId            String
+  spotifyPlaylistId String
+  name              String
+  ownerSpotifyId    String?
+  snapshotId        String?
+  isPublic          Boolean?
+  isCollaborative   Boolean?
+  lastSyncedAt      DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              SpotifyWatcherUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incidents         SpotifyTrackIncident[]
+
+  @@unique([userId, spotifyPlaylistId])
+  @@index([userId, updatedAt])
+}
+
+model SpotifyScanRun {
+  id                 String             @id @default(cuid())
+  userId             String
+  status             ScanRunStatus
+  startedAt          DateTime           @default(now())
+  finishedAt         DateTime?
+  errorMessage       String?
+  checkedPlaylists   Int                @default(0)
+  checkedTracks      Int                @default(0)
+  unavailableCount   Int                @default(0)
+  createdAt          DateTime           @default(now())
+  user               SpotifyWatcherUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstSeenIncidents SpotifyTrackIncident[] @relation("FirstSeenScan")
+  lastSeenIncidents  SpotifyTrackIncident[] @relation("LastSeenScan")
+
+  @@index([userId, startedAt])
+}
+
+model SpotifyTrackIncident {
+  id                           String              @id @default(cuid())
+  userId                       String
+  playlistId                   String
+  trackKey                     String
+  spotifyTrackId               String?
+  trackUri                     String?
+  trackName                    String
+  artistName                   String?
+  unavailableReason            String
+  consecutiveUnavailableCount  Int                 @default(1)
+  status                       TrackIncidentStatus @default(OPEN)
+  firstSeenScanRunId           String
+  lastSeenScanRunId            String
+  lastNotifiedAt               DateTime?
+  createdAt                    DateTime            @default(now())
+  updatedAt                    DateTime            @updatedAt
+  user                         SpotifyWatcherUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playlist                     SpotifyPlaylist     @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  firstSeenScan                SpotifyScanRun      @relation("FirstSeenScan", fields: [firstSeenScanRunId], references: [id], onDelete: Restrict)
+  lastSeenScan                 SpotifyScanRun      @relation("LastSeenScan", fields: [lastSeenScanRunId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, playlistId, trackKey])
+  @@index([userId, status, consecutiveUnavailableCount])
+  @@index([userId, lastNotifiedAt])
 }

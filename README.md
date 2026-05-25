@@ -178,3 +178,28 @@ Provider-filerne er stadig holdt som service-abstraktioner, så de rigtige API-k
 ## Deployment
 
 Projektet er klargjort til Vercel med miljøvariabler via `.env` lokalt og Project Settings i Vercel for preview og production.
+
+## Spotify watcher (MVP)
+
+Dette repo indeholder nu et MVP-grundlag til at overvage Spotify-playlists for utilgaengelige tracks.
+
+Nye endpoints:
+
+- `GET /api/spotify/login` starter Spotify OAuth
+- `GET /api/spotify/callback` gemmer bruger + tokens
+- `GET /api/internal/spotify/status` viser simpel driftstatus
+- `POST /api/internal/spotify/sync-playlists` syncer playlists
+- `POST /api/internal/spotify/run-scan` korer scan + evt. digest-mail
+- `POST /api/internal/spotify/test-notification` sender testmail (uafhaengigt af fund)
+
+Interne `POST` endpoints kraever header:
+
+```text
+x-cron-secret: <CRON_SECRET>
+```
+
+MVP-regler:
+
+- Daglig scan via scheduler (opsaettes til kl. 09:00 dansk tid i driftlaget)
+- Mail kun ved nye fund
+- Kraever 2 scans i traek for incident-notifikation
